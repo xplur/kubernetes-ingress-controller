@@ -1,14 +1,13 @@
 package configuration
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,6 +28,7 @@ import (
 func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn types.NamespacedName, obj client.Object) (ctrl.Result, error) {
 	// TODO need EVENTS here
 	// TODO need more status updates
+	// TODO: (shane) I want to refactor this into several smaller functions
 
 	// if this is an Ingress resource make sure it's managed by Kong
 	if obj.GetObjectKind().GroupVersionKind().Kind == "Ingress" {
@@ -56,94 +56,64 @@ func storeIngressObj(ctx context.Context, c client.Client, log logr.Logger, nsn 
 		log.Info("kong configuration did not exist, was created successfully", "namespace", nsn.Namespace, "ingress", nsn.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
-	log.Info("kong configuration secret found", "namespace", nsn.Namespace, "name", controllers.ConfigSecretName)
-
-	// The relevant Service referred to by the ingress also needs to be stored in the cache
-	switch ing := obj.(type) {
-	case *netv1.Ingress:
-		for _, rule := range ing.Spec.Rules {
-			for _, path := range rule.HTTP.Paths {
-				// retrieve the Service object for this Ingress record
-				svc := new(corev1.Service)
-				nsn := types.NamespacedName{Namespace: obj.GetNamespace(), Name: path.Backend.Service.Name}
-				if err := c.Get(ctx, nsn, svc); err != nil {
-					return ctrl.Result{}, fmt.Errorf("service %s for ingress %s could not be retrieved: %w", nsn.Name, ing.Name, err)
-				}
-
-				// store the Service object
-				_, err := storeRuntimeObject(ctx, c, secret, svc, nsn)
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-				return ctrl.Result{Requeue: true}, nil
-			}
-		}
-	case *netv1beta1.Ingress:
-		for _, rule := range ing.Spec.Rules {
-			for _, path := range rule.HTTP.Paths {
-				// retrieve the Service object for this Ingress record
-				svc := new(corev1.Service)
-				nsn := types.NamespacedName{Namespace: obj.GetNamespace(), Name: path.Backend.ServiceName}
-				if err := c.Get(ctx, nsn, svc); err != nil {
-					return ctrl.Result{}, fmt.Errorf("service %s for ingress %s could not be retrieved: %w", nsn.Name, ing.Name, err)
-				}
-
-				// store the Service object
-				_, err := storeRuntimeObject(ctx, c, secret, svc, nsn)
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-				return ctrl.Result{Requeue: true}, nil
-			}
-		}
-	default:
-		return ctrl.Result{}, fmt.Errorf("unsupported ingress type %T", ing)
-	}
 
 	// before we store configuration data for this Ingress object, ensure that it has our finalizer set
 	if !hasFinalizer(obj, KongIngressFinalizer) {
+		log.Info("finalizer is not set for ingress object, setting it", nsn.Namespace, nsn.Name)
 		finalizers := obj.GetFinalizers()
 		obj.SetFinalizers(append(finalizers, KongIngressFinalizer))
 		if err := c.Update(ctx, obj); err != nil { // TODO: patch here instead of update
 			return ctrl.Result{}, err
 		}
-	}
-
-	// store the ingress record
-	requeue, err := storeRuntimeObject(ctx, c, secret, obj, nsn)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if requeue {
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	log.Info("kong configuration patched", "namespace", nsn.Namespace, "name", controllers.ConfigSecretName)
+	// store the ingress record
+	if err := storeRuntimeObject(ctx, c, secret, obj, nsn); err != nil {
+		if errors.IsConflict(err) {
+			log.Error(err, "object updated while reconcilation was running, retrying", nsn.Namespace, nsn.Name)
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
+	log.Info("kong secret configuration successfully patched patched", "namespace", nsn.Namespace, "name", controllers.ConfigSecretName)
 	return ctrl.Result{}, nil
 }
 
-// storeRuntimeObject stores a runtime.Object in the configuration secret
-func storeRuntimeObject(ctx context.Context, c client.Client, secret *corev1.Secret, obj runtime.Object, nsn types.NamespacedName) (requeue bool, err error) {
-	// marshal to YAML for storage
-	var cfg []byte
-	cfg, err = yaml.Marshal(obj)
+// isRuntimeObjectSame indicates whether a runtime.Object you intend to store in the configuration secret is the same as what's already stored.
+// This can be used to decide whether or not an update needs to be performed on the configuration secret.
+func isRuntimeObjectSame(secret *corev1.Secret, obj runtime.Object, nsn types.NamespacedName) (bool, error) {
+	// marshal to YAML to check contents
+	cfg, err := yaml.Marshal(obj)
 	if err != nil {
 		return false, err
+	}
+
+	// check if there's any existing object
+	key := configsecret.KeyFor(obj, nsn)
+	if foundCFG, ok := secret.Data[key]; ok {
+		if bytes.Equal(foundCFG, cfg) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// storeRuntimeObject stores a runtime.Object in the configuration secret
+func storeRuntimeObject(ctx context.Context, c client.Client, secret *corev1.Secret, obj runtime.Object, nsn types.NamespacedName) error {
+	// marshal to YAML for storage
+	cfg, err := yaml.Marshal(obj)
+	if err != nil {
+		return err
 	}
 
 	// patch the secret with the runtime.Object contents
 	key := configsecret.KeyFor(obj, nsn)
 	secret.Data[key] = cfg
-	if err = c.Update(ctx, secret); err != nil { // TODO: patch here instead of update for perf
-		if errors.IsConflict(err) {
-			requeue = true
-			err = nil
-			return
-		}
-		return
-	}
 
-	return
+	return c.Update(ctx, secret) // TODO: patch here instead of update for perf
 }
 
 // cleanupObj ensures that a deleted ingress resource is no longer present in the kong configuration secret.

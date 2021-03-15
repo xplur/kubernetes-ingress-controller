@@ -3,14 +3,18 @@ package store
 import (
 	"context"
 	"fmt"
+	"os"
 
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	oldstr "github.com/kong/kubernetes-ingress-controller/pkg/store"
 	"github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -21,6 +25,11 @@ import (
 
 // New produces a new oldstr.Storer which will house the provided kubernetes.Clientset
 // and will provide parsing and translation of Kubernetes objects to the Kong Admin DSL.
+//
+// This implementation of Storer varies from the original because it using a controller
+// runtime client instead of relying on client-go cache stores for Kubernetes objects.
+// The upside of this implementation is that it's more straightforward, and it can natively
+// work with our custom APIs without needing to use a typed client or other API tricks.
 //
 // TODO: there's significant technical debt associated with the storer implementations and
 // interface as a whole, we need to determine if and how we want to continue using the store
@@ -44,7 +53,7 @@ type store struct {
 // -----------------------------------------------------------------------------
 
 func (s *store) GetSecret(namespace, name string) (*apiv1.Secret, error) {
-	var secret *apiv1.Secret
+	secret := new(apiv1.Secret)
 	if err := s.c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: name}, secret); err != nil {
 		return nil, err
 	}
@@ -52,7 +61,7 @@ func (s *store) GetSecret(namespace, name string) (*apiv1.Secret, error) {
 }
 
 func (s *store) GetService(namespace, name string) (*apiv1.Service, error) {
-	var service *apiv1.Service
+	service := new(apiv1.Service)
 	if err := s.c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: name}, service); err != nil {
 		return nil, err
 	}
@@ -60,7 +69,7 @@ func (s *store) GetService(namespace, name string) (*apiv1.Service, error) {
 }
 
 func (s *store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints, error) {
-	var endpoints *apiv1.Endpoints
+	endpoints := new(apiv1.Endpoints)
 	if err := s.c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: name}, endpoints); err != nil {
 		return nil, err
 	}
@@ -68,19 +77,35 @@ func (s *store) GetEndpointsForService(namespace, name string) (*apiv1.Endpoints
 }
 
 func (s *store) GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error) {
-	return nil, fmt.Errorf("unimplemented")
+	ingress := new(configurationv1.KongIngress)
+	if err := s.c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: name}, ingress); err != nil {
+		return nil, err
+	}
+	return ingress, nil
 }
 
 func (s *store) GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error) {
-	return nil, fmt.Errorf("unimplemented")
+	plugin := new(configurationv1.KongPlugin)
+	if err := s.c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: name}, plugin); err != nil {
+		return nil, err
+	}
+	return plugin, nil
 }
 
 func (s *store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error) {
-	return nil, fmt.Errorf("unimplemented")
+	clusterPlugin := new(configurationv1.KongClusterPlugin)
+	if err := s.c.Get(context.Background(), client.ObjectKey{Name: name}, clusterPlugin); err != nil {
+		return nil, err
+	}
+	return clusterPlugin, nil
 }
 
 func (s *store) GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error) {
-	return nil, fmt.Errorf("unimplemented")
+	consumer := new(configurationv1.KongConsumer)
+	if err := s.c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: name}, consumer); err != nil {
+		return nil, err
+	}
+	return consumer, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -88,7 +113,7 @@ func (s *store) GetKongConsumer(namespace, name string) (*configurationv1.KongCo
 // -----------------------------------------------------------------------------
 
 func (s *store) ListIngressesV1beta1() []*networkingv1beta1.Ingress {
-	var list *networkingv1beta1.IngressList
+	list := new(networkingv1beta1.IngressList)
 	if err := s.c.List(context.Background(), list); err != nil {
 		return nil
 	}
@@ -102,7 +127,7 @@ func (s *store) ListIngressesV1beta1() []*networkingv1beta1.Ingress {
 }
 
 func (s *store) ListIngressesV1() []*networkingv1.Ingress {
-	var list *networkingv1.IngressList
+	list := new(networkingv1.IngressList)
 	if err := s.c.List(context.Background(), list); err != nil {
 		return nil
 	}
@@ -113,33 +138,119 @@ func (s *store) ListIngressesV1() []*networkingv1.Ingress {
 	}
 
 	return ingresses
-
 }
 
 func (s *store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
-	return nil, fmt.Errorf("unimplemented")
+	list := new(configurationv1beta1.TCPIngressList)
+	if err := s.c.List(context.Background(), list); err != nil {
+		return nil, err
+	}
+
+	ingresses := make([]*configurationv1beta1.TCPIngress, 0, len(list.Items))
+	for _, ingress := range list.Items {
+		ingresses = append(ingresses, &ingress)
+	}
+
+	return ingresses, nil
 }
 
 func (s *store) ListUDPIngresses() ([]*v1alpha1.UDPIngress, error) {
-	return nil, fmt.Errorf("unimplemented")
+	list := new(configurationv1alpha1.UDPIngressList)
+	if err := s.c.List(context.Background(), list); err != nil {
+		return nil, err
+	}
+
+	ingresses := make([]*configurationv1alpha1.UDPIngress, 0, len(list.Items))
+	for _, ingress := range list.Items {
+		ingresses = append(ingresses, &ingress)
+	}
+
+	return ingresses, nil
 }
 
 func (s *store) ListKnativeIngresses() ([]*knative.Ingress, error) {
-	return nil, fmt.Errorf("unimplemented")
+	list := new(knative.IngressList)
+	if err := s.c.List(context.Background(), list); err != nil {
+		return nil, err
+	}
+
+	ingresses := make([]*knative.Ingress, 0, len(list.Items))
+	for _, ingress := range list.Items {
+		ingresses = append(ingresses, &ingress)
+	}
+
+	return ingresses, nil
 }
 
 func (s *store) ListGlobalKongPlugins() ([]*configurationv1.KongPlugin, error) {
-	return nil, fmt.Errorf("unimplemented")
+	list := new(configurationv1.KongPluginList)
+	if err := s.c.List(context.Background(), list); err != nil {
+		return nil, err
+	}
+
+	ingresses := make([]*configurationv1.KongPlugin, 0, len(list.Items))
+	for _, ingress := range list.Items {
+		ingresses = append(ingresses, &ingress)
+	}
+
+	return ingresses, nil
 }
 
 func (s *store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error) {
-	return nil, fmt.Errorf("unimplemented")
+	list := new(configurationv1.KongClusterPluginList)
+	if err := s.c.List(context.Background(), list); err != nil {
+		return nil, err
+	}
+
+	ingresses := make([]*configurationv1.KongClusterPlugin, 0, len(list.Items))
+	for _, ingress := range list.Items {
+		ingresses = append(ingresses, &ingress)
+	}
+
+	return ingresses, nil
+
 }
 
 func (s *store) ListKongConsumers() []*configurationv1.KongConsumer {
-	panic(fmt.Errorf("unimplemented"))
+	list := new(configurationv1.KongConsumerList)
+	if err := s.c.List(context.Background(), list); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		return nil
+	}
+
+	ingresses := make([]*configurationv1.KongConsumer, 0, len(list.Items))
+	for _, ingress := range list.Items {
+		ingresses = append(ingresses, &ingress)
+	}
+
+	return ingresses
 }
 
 func (s *store) ListCACerts() ([]*apiv1.Secret, error) {
-	return nil, fmt.Errorf("unimplemented")
+	req1, err := labels.NewRequirement("konghq.com/ca-cert", selection.Exists, []string{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list CACerts due to label error: %w", err)
+	}
+
+	req2, err := labels.NewRequirement("konghq.com/ca-cert", selection.Equals, []string{"true"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list CACerts due to label error: %w", err)
+	}
+
+	selector := labels.NewSelector()
+	selector = selector.Add(*req1)
+	selector = selector.Add(*req2)
+	opts := &client.ListOptions{LabelSelector: selector}
+
+	list := new(apiv1.SecretList)
+	if err := s.c.List(context.Background(), list, opts); err != nil {
+		return nil, err
+	}
+
+	secrets := make([]*apiv1.Secret, 0, len(list.Items))
+	for _, secret := range list.Items {
+		secrets = append(secrets, &secret)
+	}
+
+	return secrets, nil
 }
