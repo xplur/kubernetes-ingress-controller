@@ -19,10 +19,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/kind"
-	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
-
 	"github.com/kong/kubernetes-ingress-controller/railgun/controllers"
+	ctrlmgr "github.com/kong/kubernetes-ingress-controller/railgun/internal/controller/manager"
+	ktfkind "github.com/kong/kubernetes-testing-framework/pkg/kind"
 )
 
 // -----------------------------------------------------------------------------
@@ -77,70 +76,66 @@ func TestMain(m *testing.M) {
 	defer newCluster.Cleanup()
 	cluster = newCluster
 
-	// deploy the Kong Kubernetes Ingress Controller (KIC) to the cluster
-	if err := deployControllers(ctx, ready, cluster, os.Getenv("KONG_CONTROLLER_TEST_IMAGE"), controllers.DefaultNamespace); err != nil {
-		newCluster.Cleanup()
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(11)
-	}
+	// run the controller manager to deploy all of our controllers
+	go runCtrlMgr(ctx, ready)
 
+	// run the tests!
 	code := m.Run()
 	newCluster.Cleanup()
 	os.Exit(code)
 }
 
-// FIXME: this is a total hack for now, in the future we should deploy the controller into the cluster via image or run it as a goroutine.
-func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEvent, cluster kind.Cluster, containerImage, namespace string) error {
+func runCtrlMgr(ctx context.Context, ready chan ktfkind.ProxyReadinessEvent) {
 	// ensure the controller namespace is created
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controllers.DefaultNamespace}}
 	if _, err := cluster.Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return err
+			panic(err)
 		}
 	}
 
-	// run the controller in the background
-	go func() {
-		event := <-ready
-		if event.Err != nil {
-			panic(event.Err)
-		}
-		u := event.URL
-		adminHost := u.Hostname()
-		proxyReady <- u
+	// wait for the testing framework to report readiness
+	event := <-ready
+	if event.Err != nil {
+		panic(event.Err)
+	}
 
-		// create a tempfile to hold the cluster kubeconfig that will be used for the controller
-		kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")
-		if err != nil {
-			panic(err)
-		}
-		defer os.Remove(kubeconfig.Name())
+	// once the testing framework has reported readiness, publish the admin API URL
+	u := event.URL
+	adminHost := u.Hostname()
+	proxyReady <- u
 
-		// dump the kubeconfig from kind into the tempfile
-		generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", cluster.Name())
-		generateKubeconfig.Stdout = kubeconfig
-		generateKubeconfig.Stderr = os.Stderr
-		if err := generateKubeconfig.Run(); err != nil {
-			panic(err)
-		}
-		kubeconfig.Close()
+	// create a tempfile to hold the cluster kubeconfig that will be used for the controller
+	kubeconfig, err := ioutil.TempFile(os.TempDir(), "kubeconfig-")
+	if err != nil {
+		panic(err)
+	}
+	defer os.Remove(kubeconfig.Name())
 
-		// deploy our CRDs to the cluster
-		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", "../../config/crd/bases/configuration.konghq.com_udpingresses.yaml")
-		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stdout, stdout.String())
-			panic(fmt.Errorf("%s: %w", stderr.String(), err))
-		}
+	// dump the kubeconfig from kind into the tempfile
+	generateKubeconfig := exec.CommandContext(ctx, "kind", "get", "kubeconfig", "--name", cluster.Name())
+	generateKubeconfig.Stdout = kubeconfig
+	generateKubeconfig.Stderr = os.Stderr
+	if err := generateKubeconfig.Run(); err != nil {
+		panic(err)
+	}
+	kubeconfig.Close()
 
-		// if set, allow running the legacy controller for the tests instead of the current controller
-		if useLegacyKIC() {
-			cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
-		} else {
-			cmd = buildControllerCommand(ctx, kubeconfig.Name(), adminHost)
-		}
+	// deploy our CRDs to the cluster
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig.Name(), "apply", "-f", "../../config/crd/bases/configuration.konghq.com_udpingresses.yaml")
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stdout, stdout.String())
+		panic(fmt.Errorf("%s: %w", stderr.String(), err))
+	}
+
+	// if set, allow running the legacy controller for the tests instead of the current controller
+	// TODO: this is a hack for mutual testing until 2.0 releases, but should be removed once we've transitioned.
+	//       for more details see the relevant milestone: https://github.com/Kong/kubernetes-ingress-controller/milestone/12
+	if useLegacyKIC() {
+		cmd = buildLegacyCommand(ctx, kubeconfig.Name(), adminHost, cluster.Client())
 		stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
 		cmd.Stdout = io.MultiWriter(stdout, os.Stdout)
 		cmd.Stderr = stderr
@@ -148,9 +143,13 @@ func deployControllers(ctx context.Context, ready chan ktfkind.ProxyReadinessEve
 			fmt.Fprintln(os.Stdout, stdout.String())
 			panic(fmt.Errorf("%s: %w", stderr.String(), err))
 		}
-	}()
+		return
+	}
 
-	return nil
+	// configure and run the controller manager
+	ctrlmgr.Kubeconfig = kubeconfig.Name()
+	ctrlmgr.KongURL = adminHost
+	ctrlmgr.Run()
 }
 
 func useLegacyKIC() bool {
@@ -187,10 +186,4 @@ func buildLegacyCommand(ctx context.Context, kubeconfigPath, adminHost string, k
 	)
 
 	return cmd
-}
-
-func buildControllerCommand(ctx context.Context, kubeconfigPath, adminHost string) *exec.Cmd {
-	return exec.CommandContext(ctx, "go", "run", "../../main.go",
-		"--kong-url", fmt.Sprintf("http://%s:8001", adminHost),
-		"--kubeconfig", kubeconfigPath)
 }
