@@ -1,6 +1,7 @@
 package manager
 
 import (
+	goflag "flag"
 	"fmt"
 
 	"github.com/kong/kubernetes-ingress-controller/pkg/adminapi"
@@ -8,6 +9,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/pkg/util"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog"
 )
 
 // -----------------------------------------------------------------------------
@@ -79,6 +81,11 @@ const onOffUsage = "Can be one of [enabled, disabled]."
 func (c *Config) FlagSet() *pflag.FlagSet {
 
 	flagSet := flagSet{*pflag.NewFlagSet("", pflag.ExitOnError)}
+
+	// Add Go flags for klog
+	klog.InitFlags(nil)
+	goflag.Parse()
+	flagSet.AddGoFlagSet(goflag.CommandLine)
 
 	// Logging configurations
 	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
