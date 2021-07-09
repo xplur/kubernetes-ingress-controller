@@ -1,5 +1,5 @@
 resources:
-- ./../base
+- ./../base-v1
 patchesStrategicMerge:
 - kong-enterprise-k8s.yaml
 images:

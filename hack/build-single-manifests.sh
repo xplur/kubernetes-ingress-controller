@@ -5,10 +5,10 @@ set -o nounset
 set -o pipefail
 
 mkdir -pv deploy/single-v1 deploy/single-v2
-ln -sf single-v2 deploy/single
+ln -sfnv single-v2 deploy/single
 
 # k4k8s
-kustomize build ./deploy/manifests/base > deploy/single-v1/all-in-one-dbless.yaml
+kustomize build ./deploy/manifests/base-v1 > deploy/single-v1/all-in-one-dbless.yaml
 # k4k8s with DB
 kustomize build ./deploy/manifests/postgres \
   > deploy/single-v1/all-in-one-postgres.yaml
@@ -20,5 +20,5 @@ kustomize build ./deploy/manifests/enterprise \
   > deploy/single-v1/all-in-one-postgres-enterprise.yaml
 
 # Kong Dev Config
-cat ./deploy/manifests/base/custom-types.yaml \
+cat ./deploy/manifests/base-v1/custom-types.yaml \
   > hack/dev/common/custom-types.yaml
