@@ -157,15 +157,21 @@ func UpdateIngressV1(ctx context.Context, logger logr.Logger, svc file.FService,
 				continue
 			}
 
-			var status []apiv1.LoadBalancerIngress
-			curIPs := curIng.Status.LoadBalancer.Ingress
-
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update ingress v1 skipped")
-				return nil
+			existingHash, err := util.GetValue(ingresKey)
+			if err != nil {
+				log.Infof("v1ingress %s not processed yet. ", ingresKey)
+			} else {
+				curHash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if existingHash == curHash {
+					log.Info("no change in v1 ingress %s, skip updating.", ingresKey)
+					return nil
+				}
 			}
 
+			status := SliceToStatus(ips)
 			curIng.Status.LoadBalancer.Ingress = status
 			configuredV1Ingress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 			if err == nil {
@@ -214,15 +220,21 @@ func UpdateUDPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 				continue
 			}
 
-			var status []apiv1.LoadBalancerIngress
-			curIPs := curIng.Status.LoadBalancer.Ingress
-
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update udp ingress skipped")
-				return nil
+			existingHash, err := util.GetValue(ingresKey)
+			if err != nil {
+				log.Infof("udp ingress %s not processed yet. ", ingresKey)
+			} else {
+				curHash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if existingHash == curHash {
+					log.Info("no change in udp ingress %s, skip updating.", ingresKey)
+					return nil
+				}
 			}
 
+			status := SliceToStatus(ips)
 			curIng.Status.LoadBalancer.Ingress = status
 			configuredUdpIngress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 			if err == nil {
@@ -274,14 +286,21 @@ func UpdateTCPIngress(ctx context.Context, logger logr.Logger, svc file.FService
 				continue
 			}
 
-			var status []apiv1.LoadBalancerIngress
-			curIPs := curIng.Status.LoadBalancer.Ingress
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) {
-				log.Debugf("no change in status, update tcp ingress skipped")
-				return nil
+			existingHash, err := util.GetValue(ingresKey)
+			if err != nil {
+				log.Infof("tcp ingress %s not processed yet. ", ingresKey)
+			} else {
+				curHash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if existingHash == curHash {
+					log.Info("no change in tcp ingress %s, skip updating.", ingresKey)
+					return nil
+				}
 			}
 
+			status := SliceToStatus(ips)
 			curIng.Status.LoadBalancer.Ingress = status
 			configuredTCPIngress, err := ingCli.UpdateStatus(ctx, curIng, metav1.UpdateOptions{})
 			if err != nil {
@@ -343,15 +362,22 @@ func UpdateKnativeIngress(ctx context.Context, logger logr.Logger, svc file.FSer
 			}
 			ingClient := knativeCli.NetworkingV1alpha1().Ingresses(namespace)
 
-			// check if CR current status already updated
-			var status []apiv1.LoadBalancerIngress
-			curIPs := toCoreLBStatus(curIng.Status.PublicLoadBalancer)
-			status = SliceToStatus(ips)
-			if ingressSliceEqual(status, curIPs) &&
-				curIng.Status.ObservedGeneration == curIng.GetObjectMeta().GetGeneration() {
-				log.Debugf("no change in status, update knative ingress skipped")
-				return nil
+			existingHash, err := util.GetValue(ingresKey)
+			if err != nil {
+				log.Infof("knative ingress %s not processed yet. ", ingresKey)
+			} else {
+				curHash, err := hashstructure.Hash(*curIng, hashstructure.FormatV2, nil)
+				if err != nil {
+					panic(err)
+				}
+				if existingHash == curHash {
+					log.Info("no change in knative ingress %s, skip updating.", ingresKey)
+					return nil
+				}
 			}
+
+			// check if CR current status already updated
+			status := SliceToStatus(ips)
 
 			// updating current custom status
 			lbStatus := toKnativeLBStatus(status)

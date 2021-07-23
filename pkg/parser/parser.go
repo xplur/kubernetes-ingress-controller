@@ -11,11 +11,8 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/mitchellh/hashstructure/v2"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-
 	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -28,157 +25,27 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1"
 )
 
-func filterProcessedIngress(log logrus.FieldLogger,
-	tcpIngresses []*configurationv1beta1.TCPIngress,
-	udpIngresses []*configurationv1beta1.UDPIngress,
-	v1Ingresses []*networkingv1.Ingress,
-	knativeIngresses []*knative.Ingress) ([]*configurationv1beta1.TCPIngress,
-	[]*configurationv1beta1.UDPIngress,
-	[]*networkingv1.Ingress,
-	[]*knative.Ingress) {
-
-	log.Infof("Filtering unprocessed ingresses.")
-	var restcp []*configurationv1beta1.TCPIngress
-	for _, ingress := range tcpIngresses {
-		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		existingHash, err := util.GetValue(ingressKey)
-		if err != nil {
-			log.Infof("tcpingress %s not processed yet. ", ingressKey)
-			restcp = append(restcp, ingress)
-		} else {
-			tcpCopy := configurationv1beta1.TCPIngress{}
-			tcpCopy.ObjectMeta = (*ingress).ObjectMeta
-			tcpCopy.Spec = (*ingress).Spec
-			tcpCopy.Status = (*ingress).Status
-			curHash, err := hashstructure.Hash(&tcpCopy, hashstructure.FormatV2, nil)
-			if err != nil {
-				panic(err)
-			}
-
-			log.Infof("persisted ingress %v hash %s cur ingress hash %s ", tcpCopy, existingHash, curHash)
-			if existingHash != curHash {
-				log.Infof("tcpingress %s configured. ", ingressKey)
-				restcp = append(restcp, ingress)
-			} else {
-				log.Infof("tcpingress %s already processed.", ingressKey)
-			}
-		}
-	}
-
-	var resudp []*configurationv1beta1.UDPIngress
-	for _, ingress := range udpIngresses {
-		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-
-		existingHash, err := util.GetValue(ingressKey)
-		if err != nil {
-			log.Infof("udpingress %s not processed yet. ", ingressKey)
-			resudp = append(resudp, ingress)
-		} else {
-
-			udpCopy := configurationv1beta1.UDPIngress{}
-			udpCopy.ObjectMeta = (*ingress).ObjectMeta
-			udpCopy.Spec = (*ingress).Spec
-			udpCopy.Status = (*ingress).Status
-
-			curHash, err := hashstructure.Hash(&udpCopy, hashstructure.FormatV2, nil)
-			if err != nil {
-				panic(err)
-			}
-
-			log.Infof("persisted ingress %v hash %s cur ingress hash %s ", ingress, existingHash, curHash)
-			if existingHash != curHash {
-				log.Infof("udpingress %s configured. ", ingressKey)
-				resudp = append(resudp, ingress)
-			} else {
-				log.Infof("udpingress %s already processed.", ingressKey)
-			}
-		}
-	}
-
-	var resv1 []*networkingv1.Ingress
-	for _, ingress := range v1Ingresses {
-		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-
-		existingHash, err := util.GetValue(ingressKey)
-		if err != nil {
-			log.Infof("v1ingress %s not processed yet. ", ingressKey)
-			resv1 = append(resv1, ingress)
-		} else {
-			v1ingressCopy := networkingv1.Ingress{}
-			v1ingressCopy.ObjectMeta = (*ingress).ObjectMeta
-			v1ingressCopy.Spec = (*ingress).Spec
-			v1ingressCopy.Status = (*ingress).Status
-
-			curHash, err := hashstructure.Hash(&v1ingressCopy, hashstructure.FormatV2, nil)
-			if err != nil {
-				panic(err)
-			}
-
-			log.Infof("persisted ingress hash %d cur ingress hash %d ", existingHash, curHash)
-			if existingHash != curHash {
-				log.Infof("v1ingress %s configured. ", ingressKey)
-				resv1 = append(resv1, ingress)
-			} else {
-				log.Infof("v1ingress %s already processed.", ingressKey)
-			}
-		}
-	}
-
-	var resknative []*knative.Ingress
-	for _, ingress := range knativeIngresses {
-		ingressKey := fmt.Sprintf("%s-%s", (*ingress).Namespace, (*ingress).Name)
-		existingHash, err := util.GetValue(ingressKey)
-		if err != nil {
-			log.Infof("knativeingress %s not processed yet. ", ingressKey)
-			resknative = append(resknative, ingress)
-		} else {
-			knativeingressCopy := knative.Ingress{}
-			knativeingressCopy.ObjectMeta = (*ingress).ObjectMeta
-			knativeingressCopy.Spec = (*ingress).Spec
-			knativeingressCopy.Status = (*ingress).Status
-
-			curHash, err := hashstructure.Hash(&knativeingressCopy, hashstructure.FormatV2, nil)
-			if err != nil {
-				panic(err)
-			}
-
-			log.Infof(" %d cur ingress hash %d ", existingHash, curHash)
-			if existingHash != curHash {
-				log.Infof("knativeingress %s configured. ", ingressKey)
-				resknative = append(resknative, ingress)
-			} else {
-				log.Infof("knativeingress %s already processed.", ingressKey)
-			}
-		}
-	}
-	return restcp, resudp, resv1, resknative
-}
-
 func parseAll(log logrus.FieldLogger, s store.Storer) ingressRules {
+	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
+	parsedIngressV1 := fromIngressV1(log, s.ListIngressesV1())
+
 	tcpIngresses, err := s.ListTCPIngresses()
 	if err != nil {
 		log.Errorf("failed to list TCPIngresses: %v", err)
 	}
+	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
 
 	udpIngresses, err := s.ListUDPIngresses()
 	if err != nil {
 		log.Errorf("failed to list UDPIngresses: %v", err)
 	}
+	parsedUDPIngresses := fromUDPIngressV1Alpha1(log, udpIngresses)
 
-	v1Ingresses := s.ListIngressesV1()
 	knativeIngresses, err := s.ListKnativeIngresses()
 	if err != nil {
 		log.Errorf("failed to list Knative Ingresses: %v", err)
 	}
-
-	tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses = filterProcessedIngress(log, tcpIngresses, udpIngresses, v1Ingresses, knativeIngresses)
-	log.Infof("\n debug tcpIngresses %d udpIngresses %d v1Ingresses %d  knativeIngresses %d\n",
-		len(tcpIngresses), len(udpIngresses), len(v1Ingresses), len(knativeIngresses))
-	parsedIngressV1 := fromIngressV1(log, v1Ingresses)
-	parsedTCPIngress := fromTCPIngressV1beta1(log, tcpIngresses)
-	parsedUDPIngresses := fromUDPIngressV1beta1(log, udpIngresses)
 	parsedKnative := fromKnativeIngress(log, knativeIngresses)
-	parsedIngressV1beta1 := fromIngressV1beta1(log, s.ListIngressesV1beta1())
 
 	return mergeIngressRules(parsedIngressV1beta1, parsedIngressV1, parsedTCPIngress, parsedUDPIngresses, parsedKnative)
 }
@@ -342,6 +209,12 @@ func getUpstreams(
 	log logrus.FieldLogger, s store.Storer, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
 	var upstreams []kongstate.Upstream
 	for _, service := range serviceMap {
+		// TODO: for v1alpha1 of UDPIngress we don't support automated Kubernetes service resolution,
+		// See the following issue for follow-up: https://github.com/Kong/kubernetes-ingress-controller/issues/1080
+		if service.Protocol != nil && *service.Protocol == "udp" {
+			return nil
+		}
+
 		var targets []kongstate.Target
 		port, err := findPort(&service.K8sService, service.Backend.Port)
 		if err == nil {
@@ -448,6 +321,8 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 
 func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Service,
 	servicePort *corev1.ServicePort) []kongstate.Target {
+	var targets []kongstate.Target
+	var endpoints []util.Endpoint
 
 	log = log.WithFields(logrus.Fields{
 		"service_name":      svc.Name,
@@ -455,24 +330,19 @@ func getServiceEndpoints(log logrus.FieldLogger, s store.Storer, svc corev1.Serv
 		"service_port":      servicePort,
 	})
 
-	// in theory a Service could have multiple port protocols, we need to ensure we gather
-	// endpoints based on all the protocols the service is configured for. We always check
-	// for TCP as this is the default protocol for service ports.
-	protocols := listProtocols(svc)
-
-	// check all protocols for associated endpoints
-	endpoints := []util.Endpoint{}
-	for protocol := range protocols {
-		newEndpoints := getEndpoints(log, &svc, servicePort, protocol, s.GetEndpointsForService)
-		if len(newEndpoints) > 0 {
-			endpoints = append(endpoints, newEndpoints...)
-		}
-	}
+	endpoints = getEndpoints(log, &svc, servicePort, corev1.ProtocolTCP, s.GetEndpointsForService)
 	if len(endpoints) == 0 {
 		log.Warningf("no active endpoints")
 	}
-
-	return targetsForEndpoints(endpoints)
+	for _, endpoint := range endpoints {
+		target := kongstate.Target{
+			Target: kong.Target{
+				Target: kong.String(endpoint.Address + ":" + endpoint.Port),
+			},
+		}
+		targets = append(targets, target)
+	}
+	return targets
 }
 
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
@@ -570,35 +440,4 @@ func getEndpoints(
 
 	log.Debugf("found endpoints: %v", upsServers)
 	return upsServers
-}
-
-// listProtocols is a helper function to map out all the in-use corev1.Protocols
-// for a service given a corev1.Service object.
-//
-// TODO: due to historical logic this function defaults to assuming TCP protocol
-//       is valid for the Service and its endpoints, however we need to follow up
-//       on this as this is not technically correct and causes waste.
-//       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1429
-func listProtocols(svc corev1.Service) map[corev1.Protocol]bool {
-	protocols := map[corev1.Protocol]bool{corev1.ProtocolTCP: true}
-	for _, port := range svc.Spec.Ports {
-		if port.Protocol != "" {
-			protocols[port.Protocol] = true
-		}
-	}
-	return protocols
-}
-
-// targetsForEndpoints generates kongstate.Target objects for each util.Endpoint provided.
-func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
-	targets := []kongstate.Target{}
-	for _, endpoint := range endpoints {
-		target := kongstate.Target{
-			Target: kong.Target{
-				Target: kong.String(endpoint.Address + ":" + endpoint.Port),
-			},
-		}
-		targets = append(targets, target)
-	}
-	return targets
 }

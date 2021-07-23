@@ -3,7 +3,6 @@ package proxy
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -32,13 +31,12 @@ func NewCacheBasedProxy(ctx context.Context,
 	ingressClassName string,
 	enableReverseSync bool,
 	kongUpdater KongUpdater,
-	timeout time.Duration,
 ) (Proxy, error) {
 	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
 	if err != nil {
 		return nil, err
 	}
-	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, timeout, kongUpdater)
+	return NewCacheBasedProxyWithStagger(ctx, logger, k8s, kongConfig, ingressClassName, enableReverseSync, stagger, kongUpdater)
 }
 
 // NewCacheBasedProxy will provide a new Proxy object. Note that this starts some background goroutines and the caller
@@ -51,7 +49,6 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 	ingressClassName string,
 	enableReverseSync bool,
 	stagger time.Duration,
-	timeout time.Duration,
 	kongUpdater KongUpdater,
 ) (Proxy, error) {
 	// configure the cachestores and the proxy instance
@@ -73,10 +70,7 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 		update:     make(chan *cachedObject, DefaultObjectBufferSize),
 		del:        make(chan *cachedObject, DefaultObjectBufferSize),
 		stagger:    stagger,
-		timeout:    timeout,
 		syncTicker: time.NewTicker(stagger),
-
-		internalCacheLock: &sync.RWMutex{},
 	}
 
 	// initialize the proxy which validates connectivity with the Admin API and
@@ -103,10 +97,17 @@ func NewCacheBasedProxyWithStagger(ctx context.Context,
 // This object's attributes are immutable (private), and it is threadsafe.
 type clientgoCachedProxyResolver struct {
 	// kubernetes configuration
+	k8s   client.Client
 	cache *store.CacheStores
+
+	// lastConfigSHA indicates the last SHA sum for the last configuration
+	// updated in the Kong Proxy and is used to avoid making unnecessary updates.
+	lastConfigSHA []byte
 
 	// kong configuration
 	kongConfig        sendconfig.Kong
+	kongRootConfig    map[string]interface{}
+	kongProxyConfig   map[string]interface{}
 	enableReverseSync bool
 	dbmode            string
 	version           semver.Version
@@ -123,7 +124,6 @@ type clientgoCachedProxyResolver struct {
 	ingressClassName string
 	ctx              context.Context
 	stagger          time.Duration
-	timeout          time.Duration
 	syncTicker       *time.Ticker
 	stopCh           chan struct{}
 
@@ -135,9 +135,6 @@ type clientgoCachedProxyResolver struct {
 	// channels
 	update chan *cachedObject
 	del    chan *cachedObject
-
-	// locks
-	internalCacheLock *sync.RWMutex
 }
 
 // cacheAction indicates what caching action (update, delete) was taken for any particular runtime.Object.
@@ -159,6 +156,9 @@ type cachedObject struct {
 	key        string
 	runtimeObj runtime.Object
 }
+
+// objectTracker is a secondary cache used to track objects that have been updated/deleted between successful updates of the Kong Admin API.
+type objectTracker map[string]*cachedObject
 
 // -----------------------------------------------------------------------------
 // Client Go Cached Proxy Resolver - Public Methods - Interface Implementation
@@ -184,13 +184,6 @@ func (p *clientgoCachedProxyResolver) DeleteObject(obj client.Object) error {
 	}
 }
 
-func (p *clientgoCachedProxyResolver) ObjectExists(obj client.Object) (bool, error) {
-	p.internalCacheLock.RLock()
-	defer p.internalCacheLock.RUnlock()
-	_, exists, err := p.cache.Get(obj)
-	return exists, err
-}
-
 // -----------------------------------------------------------------------------
 // Client Go Cached Proxy Resolver - Private Methods - Cache Server
 // -----------------------------------------------------------------------------
@@ -204,7 +197,6 @@ func (p *clientgoCachedProxyResolver) ObjectExists(obj client.Object) (bool, err
 // While processing objects the cacheServer will (synchronously) convert the objects to kong DSL and
 // submit POST updates to the Kong Admin API with the new configuration.
 func (p *clientgoCachedProxyResolver) startCacheServer() {
-	backendNeedsSync := false
 	p.logger.Info("the proxy cache server has been started")
 	for {
 		select {
@@ -213,24 +205,17 @@ func (p *clientgoCachedProxyResolver) startCacheServer() {
 				p.logger.Error(err, "object could not be updated in the cache and will be discarded")
 				break
 			}
-			backendNeedsSync = true
 		case cobj := <-p.del:
 			if err := p.cacheDelete(cobj); err != nil {
 				p.logger.Error(err, "object could not be deleted from the cache and will be discarded")
 				break
 			}
-			backendNeedsSync = true
 		case <-p.syncTicker.C:
-			if !p.enableReverseSync && !backendNeedsSync {
-				break
-			}
-
-			err := p.kongUpdater(p.ctx, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
+			updateConfigSHA, err := p.kongUpdater(p.ctx, p.lastConfigSHA, p.cache, p.ingressClassName, p.deprecatedLogger, p.kongConfig, p.enableReverseSync)
 			if err != nil {
 				p.logger.Error(err, "could not update kong admin")
-				break
 			}
-			backendNeedsSync = false
+			p.lastConfigSHA = updateConfigSHA
 		case <-p.ctx.Done():
 			p.logger.Info("the proxy cache server's context is done, shutting down")
 			if err := p.ctx.Err(); err != nil {
@@ -310,10 +295,10 @@ func (p *clientgoCachedProxyResolver) cacheDelete(cobj *cachedObject) error {
 	return cobj.err
 }
 
-// kongRootWithTimeout provides the root configuration from Kong, but uses a configurable timeout to avoid long waits if the Admin API
+// kongRootWithTimeout provides the root configuration from Kong, but uses a default timeout to avoid long waits if the Admin API
 // is not yet ready to respond. If a timeout error occurs, the caller is responsible for providing a retry mechanism.
 func (p *clientgoCachedProxyResolver) kongRootWithTimeout() (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(p.ctx, p.timeout)
+	ctx, cancel := context.WithTimeout(p.ctx, 3*time.Second)
 	defer cancel()
 	return p.kongConfig.Client.Root(ctx)
 }

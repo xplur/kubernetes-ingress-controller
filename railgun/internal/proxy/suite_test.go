@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	kongt "github.com/kong/kubernetes-testing-framework/pkg/utils/kong"
+	kongt "github.com/kong/kubernetes-testing-framework/pkg/kong"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -75,13 +75,14 @@ func setupVars() {
 //       mock out the requests (this is used above to ensure that tests can properly initialize a Proxy instance)
 //       instead of the always-succeed functionality we use currently.
 var mockKongAdmin KongUpdater = func(ctx context.Context,
+	lastConfigSHA []byte,
 	cache *store.CacheStores,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
-	enableReverseSync bool) error {
+	enableReverseSync bool) ([]byte, error) {
 	fakeKongAdminUpdateCount(1)
-	return nil
+	return lastConfigSHA, nil
 }
 
 // these globs are for threadsafety and tracking of the fakeKongAdminUpdateCount() function,
@@ -103,10 +104,6 @@ func fakeKongAdminUpdateCount(newcounts ...int) int {
 	defer countLock.Unlock()
 	if len(newcounts) < 1 {
 		return updateCount
-	}
-	if len(newcounts) == 1 && newcounts[0] == 0 {
-		updateCount = 0
-		return 0
 	}
 	for _, count := range newcounts {
 		updateCount = updateCount + count

@@ -17,13 +17,9 @@ import (
 const (
 	// DefaultSyncSeconds indicates the time.Duration (minimum) that will occur between
 	// updates to the Kong Proxy Admin API when using the NewProxy() constructor.
-	// this 1s default was based on local testing wherein it appeared sub-second updates
-	// to the Admin API could be problematic (or at least operate differently) based on
-	// which storage backend was in use (i.e. "dbless", "postgres"). This is a workaround
-	// for improvements we still need to investigate upstream.
 	//
-	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
-	DefaultSyncSeconds float32 = 3.0
+	// NOTE: this default was originally inherited from KIC v1.x.
+	DefaultSyncSeconds float32 = 0.3
 
 	// DefaultObjectBufferSize is the number of client.Objects that the server will buffer
 	// before it starts rejecting new objects while it processes the originals.
@@ -62,17 +58,14 @@ type Proxy interface {
 	// The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
 	// A status will later be added to the object whether the configuration update succeeds or fails.
 	DeleteObject(obj client.Object) error
-
-	// ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
-	ObjectExists(obj client.Object) (bool, error)
 }
 
 // KongUpdater is a type of function that describes how to provide updates to the Kong Admin API
 // and implementations will report the configuration SHA that results from any update performed.
-type KongUpdater func(
-	ctx context.Context,
+type KongUpdater func(ctx context.Context,
+	lastConfigSHA []byte,
 	cache *store.CacheStores,
 	ingressClassName string,
 	deprecatedLogger logrus.FieldLogger,
 	kongConfig sendconfig.Kong,
-	enableReverseSync bool) error
+	enableReverseSync bool) ([]byte, error)
