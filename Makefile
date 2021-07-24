@@ -9,6 +9,7 @@ REPO_URL=github.com/kong/kubernetes-ingress-controller
 IMGNAME?=kubernetes-ingress-controller
 IMAGE = $(REGISTRY)/$(IMGNAME)
 IMG ?= controller:latest
+TEST_SELECTOR ?= ".*"
 
 # ------------------------------------------------------------------------------
 # Setup
@@ -127,8 +128,8 @@ generate.clientsets:
 	@client-gen --go-header-file ./hack/boilerplate.go.txt \
 		--clientset-name clientset \
 		--input-base github.com/kong/kubernetes-ingress-controller/pkg/apis/  \
-		--input configuration/v1,configuration/v1beta1 \
-		--input-dirs github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1/ \
+		--input configuration/v1,configuration/v1beta1,configuration/v1alpha1 \
+		--input-dirs github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1alpha1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1beta1/,github.com/kong/kubernetes-ingress-controller/railgun/apis/configuration/v1/ \
 		--output-base client-gen-tmp/ \
 		--output-package github.com/kong/kubernetes-ingress-controller/internal/
 	@rm -rf pkg/clientset/
@@ -173,7 +174,7 @@ test.integration.legacy: container
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) ./test/integration/
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=integration_tests" go test -timeout 15m -race -v -count=1 -covermode=atomic -coverpkg=$(PKG_LIST) -coverprofile=$(COVERAGE_INTEGRATION_PROFILE) -run $(TEST_SELECTOR) ./test/integration/
 
 # TODO: race checking has been temporarily turned off because of race conditions found with deck. This will be resolved in an upcoming Alpha release of KIC 2.0.
 #       See: https://github.com/Kong/kubernetes-ingress-controller/issues/1324
