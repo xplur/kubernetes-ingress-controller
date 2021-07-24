@@ -19,34 +19,22 @@ limitations under the License.
 package fake
 
 import (
-	v1 "github.com/kong/kubernetes-ingress-controller/pkg/clientset/typed/configuration/v1"
+	v1alpha1 "github.com/kong/kubernetes-ingress-controller/pkg/clientset/typed/configuration/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeConfigurationV1 struct {
+type FakeConfigurationV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeConfigurationV1) KongClusterPlugins() v1.KongClusterPluginInterface {
-	return &FakeKongClusterPlugins{c}
-}
-
-func (c *FakeConfigurationV1) KongConsumers(namespace string) v1.KongConsumerInterface {
-	return &FakeKongConsumers{c, namespace}
-}
-
-func (c *FakeConfigurationV1) KongIngresses(namespace string) v1.KongIngressInterface {
-	return &FakeKongIngresses{c, namespace}
-}
-
-func (c *FakeConfigurationV1) KongPlugins(namespace string) v1.KongPluginInterface {
-	return &FakeKongPlugins{c, namespace}
+func (c *FakeConfigurationV1alpha1) IngressClassParamses(namespace string) v1alpha1.IngressClassParamsInterface {
+	return &FakeIngressClassParamses{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeConfigurationV1) RESTClient() rest.Interface {
+func (c *FakeConfigurationV1alpha1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

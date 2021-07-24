@@ -15,7 +15,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	outputFile = "internal/controllers/configuration/zz_generated_controllers.go"
+	outputFile = "../../internal/controllers/configuration/zz_generated_controllers.go"
 
 	corev1     = "k8s.io/api/core/v1"
 	netv1      = "k8s.io/api/networking/v1"
@@ -112,6 +112,18 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingressClasses",
 		URL:                               "networking.k8s.io",
 		CacheType:                         "IngressClassV1",
+		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameSpec:       false,
+		RBACVerbs:                         []string{"get", "list", "watch"},
+	},
+	typeNeeded{
+		PackageImportAlias:                "kongv1alpha1",
+		PackageAlias:                      "KongV1Alpha1",
+		Package:                           kongv1,
+		Type:                              "IngressClassParams",
+		Plural:                            "IngressClassParams",
+		URL:                               "configuration.konghq.com",
+		CacheType:                         "IngressClassParams",
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -239,7 +251,7 @@ func main() {
 func header() (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 
-	boilerPlate, err := ioutil.ReadFile("hack/boilerplate.go.txt")
+	boilerPlate, err := ioutil.ReadFile("../../hack/boilerplate.go.txt")
 	if err != nil {
 		return nil, err
 	}
@@ -362,6 +374,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 

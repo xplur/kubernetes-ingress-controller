@@ -42,6 +42,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/pkg/apis/configuration/v1beta1"
 )
 
@@ -67,6 +68,7 @@ func (e ErrNotFound) Error() string {
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
 	GetIngressClass(name string) (*networkingv1.IngressClass, error)
+	GetIngressClassParams(name string) (*kongv1alpha1.IngressClassParams, error)
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
@@ -108,11 +110,12 @@ type Store struct {
 // CacheStores stores cache.Store for all Kinds of k8s objects that
 // the Ingress Controller reads.
 type CacheStores struct {
-	IngressV1beta1 cache.Store
-	IngressV1      cache.Store
-	IngressClassV1 cache.Store
-	TCPIngress     cache.Store
-	UDPIngress     cache.Store
+	IngressV1beta1     cache.Store
+	IngressV1          cache.Store
+	IngressClass       cache.Store
+	IngressClassParams cache.Store
+	TCPIngress         cache.Store
+	UDPIngress         cache.Store
 
 	Service  cache.Store
 	Secret   cache.Store
@@ -132,7 +135,8 @@ func NewCacheStores() (c CacheStores) {
 	c.Consumer = cache.NewStore(keyFunc)
 	c.Endpoint = cache.NewStore(keyFunc)
 	c.IngressV1 = cache.NewStore(keyFunc)
-	c.IngressClassV1 = cache.NewStore(clusterResourceKeyFunc)
+	c.IngressClass = cache.NewStore(clusterResourceKeyFunc)
+	c.IngressClassParams = cache.NewStore(clusterResourceKeyFunc)
 	c.IngressV1beta1 = cache.NewStore(keyFunc)
 	c.KnativeIngress = cache.NewStore(keyFunc)
 	c.Plugin = cache.NewStore(keyFunc)
@@ -197,7 +201,7 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	case *networkingv1.Ingress:
 		return c.IngressV1.Get(obj)
 	case *networkingv1.IngressClass:
-		return c.IngressClassV1.Get(obj)
+		return c.IngressClass.Get(obj)
 	case *corev1.Service:
 		return c.Service.Get(obj)
 	case *corev1.Secret:
@@ -213,6 +217,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.ClusterPlugin.Get(obj)
 	case *kongv1.KongConsumer:
 		return c.Consumer.Get(obj)
+	case *kongv1alpha1.IngressClassParams:
+		return c.IngressClassParams.Get(obj)
 	case *kongv1.KongIngress:
 		return c.KongIngress.Get(obj)
 	case *kongv1beta1.TCPIngress:
@@ -240,7 +246,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	case *networkingv1.Ingress:
 		return c.IngressV1.Add(obj)
 	case *networkingv1.IngressClass:
-		return c.IngressClassV1.Add(obj)
+		return c.IngressClass.Add(obj)
 	case *corev1.Service:
 		return c.Service.Add(obj)
 	case *corev1.Secret:
@@ -256,6 +262,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.ClusterPlugin.Add(obj)
 	case *kongv1.KongConsumer:
 		return c.Consumer.Add(obj)
+	case *kongv1alpha1.IngressClassParams:
+		return c.IngressClassParams.Add(obj)
 	case *kongv1.KongIngress:
 		return c.KongIngress.Add(obj)
 	case *kongv1beta1.TCPIngress:
@@ -284,7 +292,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	case *networkingv1.Ingress:
 		return c.IngressV1.Delete(obj)
 	case *networkingv1.IngressClass:
-		return c.IngressClassV1.Delete(obj)
+		return c.IngressClass.Delete(obj)
 	case *corev1.Service:
 		return c.Service.Delete(obj)
 	case *corev1.Secret:
@@ -300,6 +308,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.ClusterPlugin.Delete(obj)
 	case *kongv1.KongConsumer:
 		return c.Consumer.Delete(obj)
+	case *kongv1alpha1.IngressClassParams:
+		return c.IngressClassParams.Delete(obj)
 	case *kongv1.KongIngress:
 		return c.KongIngress.Delete(obj)
 	case *kongv1beta1.TCPIngress:
@@ -364,7 +374,7 @@ func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 
 // GetIngressClass returns the IngressClass resource named 'name', if it exists; Otherwise, it returns an error
 func (s Store) GetIngressClass(name string) (*networkingv1.IngressClass, error) {
-	p, exists, err := s.stores.IngressClassV1.GetByKey(name)
+	p, exists, err := s.stores.IngressClass.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}
@@ -372,6 +382,18 @@ func (s Store) GetIngressClass(name string) (*networkingv1.IngressClass, error) 
 		return nil, ErrNotFound{fmt.Sprintf("IngressClass %v not found", name)}
 	}
 	return p.(*networkingv1.IngressClass), nil
+}
+
+// GetIngressClassParams returns the IngressClassParams resource named 'name', if it exists; Otherwise, it returns an error
+func (s Store) GetIngressClassParams(name string) (*kongv1alpha1.IngressClassParams, error) {
+	p, exists, err := s.stores.IngressClassParams.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("IngressClass %v not found", name)}
+	}
+	return p.(*kongv1alpha1.IngressClassParams), nil
 }
 
 // GetService returns a Service using the namespace and name as key
@@ -727,6 +749,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &networkingv1.Ingress{}, nil
 	case networkingv1.SchemeGroupVersion.WithKind("IngressClass"):
 		return &networkingv1.IngressClass{}, nil
+	case kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParams"):
+		return &kongv1alpha1.IngressClassParams{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
 		return &kongv1beta1.TCPIngress{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongIngress"):
