@@ -37,7 +37,7 @@ pipeline {
                         timeout(time: 30, unit: 'MINUTES') {
                            try{
                                 echo 'Test Deployed Cluster'
-                                sh 'make test.integration.cluster'
+                                sh 'cd railgun && make test.integration.cluster'
                             } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
                                 timeOutException = e
                                 retryClusterDeployment = retryClusterDeployment + 1
