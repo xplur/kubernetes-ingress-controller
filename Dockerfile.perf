@@ -1,5 +1,4 @@
 FROM centos:7
-
 RUN yum -y --enablerepo=extras install epel-release && yum clean all && yum -y update
 RUN yum -y install wget
 RUN yum -y install make
@@ -7,8 +6,6 @@ RUN yum install gcc -y
 RUN yum install zlib-devel -y
 RUN yum install libffi-devel -y
 RUN yum install openssl-devel -y
-RUN rpm -e --nodeps python
-
 RUN wget https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz && tar xzf Python-3.7.2.tgz
 RUN cd Python-3.7.2 && ./configure --enable-optimizations && make altinstall
 RUN rm Python-3.7.2.tgz
@@ -16,18 +13,9 @@ RUN rm Python-3.7.2.tgz
 USER root
 RUN yum install dnf -y
 RUN yum install sudo -y
-RUN sudo ln -s /usr/bin/python3.7 /usr/bin/python
-
 RUN sudo yum -y install epel-release
 RUN sudo yum -y install jq -y
-
-RUN sudo wget https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz 
-RUN sudo tar -xzf go1.16.4.linux-amd64.tar.gz 
-RUN sudo mv go /usr/local
-RUN sudo mkdir -p $HOME/go
-RUN sudo chmod 777 $HOME/go
-RUN export GOROOT=/usr/local/go
-RUN export GOPATH=$HOME/go
+RUN yum install --assumeyes python3-pip
 
 RUN yum install unzip -y
 RUN curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
@@ -36,9 +24,9 @@ RUN sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 RUN aws --version
 RUN rm awscli-bundle.zip
 
+ADD deploy /
 ADD pkg /
 ADD railgun /
-ADD deploy /
 ADD test /
 
 RUN echo $'[kubernetes] \n\
