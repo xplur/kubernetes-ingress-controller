@@ -18,7 +18,8 @@ RUN sudo wget https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz
 RUN sudo tar -xzf go1.16.4.linux-amd64.tar.gz 
 RUN sudo mv go /usr/local
 RUN sudo mkdir -p $HOME/go
-RUN sudo export GOROOT=/usr/local/go
+RUN sudo chmod 777
+RUN export GOROOT=/usr/local/go
 RUN export GOPATH=$HOME/go
 
 RUN yum install unzip -y
