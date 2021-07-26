@@ -1,0 +1,135 @@
+int retryClusterDeployment = 0
+int retryKICDeployment = 0
+int retryIngressTests = 0
+def timeOutException = null
+def manualResultSet = null
+
+pipeline {
+
+    agent {
+        dockerfile {
+            filename 'Dockerfile.perf'
+            args '--volume-driver=nfs --privileged -v /var/lib/jenkins:/var/lib/jenkins'
+        }
+    }
+
+    options {
+        // do not allow concurrent builds to run if any job is in running state
+        disableConcurrentBuilds()
+        retry(2)
+    }
+
+    stages {
+
+        stage('Deploy Test Cluster') {
+            when {
+                anyOf {
+                    expression { "${manualResultSet}" == 'null' }
+                    expression { "${manualResultSet}" == 'FAILURE' && "${params.IS_RETRY_NEEDED}" == 'true' }
+                }
+            }
+
+            steps {
+                echo "result set in  post condition is ${manualResultSet}"
+                retry(2) {
+                    script {
+                        timeOutException = null
+                        timeout(time: 30, unit: 'MINUTES') {
+                           try{
+                                echo 'Test Deployed Cluster'
+                                sh 'make test.integration.cluster'
+                            } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
+                                timeOutException = e
+                                retryClusterDeployment = retryClusterDeployment + 1
+                            }
+                        }
+                        if (retryClusterDeployment > 0 && timeOutException != null) {
+                            echo "retrying installing test cluster stage :${retryClusterDeployment}"
+                            sleep(60 * 1 + 30 * retryClusterDeployment)
+                            error "Caught ${timeOutException.toString()}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy KIC within test Cluster') {
+            when {
+                anyOf {
+                    expression { "${manualResultSet}" == 'null' }
+                    expression { "${manualResultSet}" == 'FAILURE' && "${params.IS_RETRY_NEEDED}" == 'true' }
+                }
+            }
+
+            steps {
+                echo "result set in  post condition is ${manualResultSet}"
+                retry(4) {
+                    script {
+                        timeOutException = null
+                        timeout(time: 300, unit: 'MINUTES') {
+                           try{
+                                echo 'Test KIC incluster deployment'
+                                sh 'kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml'
+                            } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
+                                timeOutException = e
+                                retryKICDeployment = retryKICDeployment + 1
+                            }
+                        }
+                        if (retryKICDeployment > 0 && timeOutException != null) {
+                            echo "retrying testing single GNS :${retryKICDeployment}"
+                            sleep(100 * 2 + 200 * retryKICDeployment)
+                            error "Caught ${timeOutException.toString()}"
+                        }
+                    }
+
+                }
+            }
+        }
+
+        stage('Collect Ingress Test Data') {
+            when {
+                anyOf {
+                    expression { "${manualResultSet}" == 'null' }
+                    expression { "${manualResultSet}" == 'FAILURE' && "${params.IS_RETRY_NEEDED}" == 'true' }
+                }
+            }
+
+            steps {
+                echo "result set in  post condition is ${manualResultSet}"
+                retry(4) {
+                    script {
+                        timeOutException = null
+                        timeout(time: 300, unit: 'MINUTES') {
+                           try{
+                                echo 'Test Ingress Controller Performance'
+                                sh 'TEST_MODE="true" TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test ./test/performance/ -v -timeout 9999s'
+                            } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
+                                timeOutException = e
+                                retryIngressTests = retryIngressTests + 1
+                            }
+                        }
+                        if (retryIngressTests > 0 && timeOutException != null) {
+                            echo "retrying testing single GNS :${retryIngressTests}"
+                            sleep(100 * 2 + 200 * retryIngressTests)
+                            error "Caught ${timeOutException.toString()}"
+                        }
+                    }
+
+                }
+            }
+        }
+
+        stage('Archive') {
+             when {
+                anyOf {
+                    expression {"${manualResultSet}"=='null'}
+                    expression {"${manualResultSet}"=='FAILURE' && "${params.IS_RETRY_NEEDED}" == 'true'}
+                }
+           }
+
+            steps {
+                archiveArtifacts artifacts: '**/*.log, **/*.json, **/*.csv, **/*.png'
+            }
+        }
+    }
+}
