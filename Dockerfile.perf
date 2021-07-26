@@ -17,18 +17,6 @@ RUN sudo yum -y install epel-release
 RUN sudo yum -y install jq -y
 RUN yum install --assumeyes python3-pip
 
-RUN yum install unzip -y
-RUN curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-RUN unzip awscli-bundle.zip
-RUN sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
-RUN aws --version
-RUN rm awscli-bundle.zip
-
-ADD deploy /
-ADD pkg /
-ADD railgun /
-ADD test /
-
 RUN echo $'[kubernetes] \n\
 name=Kubernetes \n\
 baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64 \n\
@@ -56,3 +44,17 @@ RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86
 && mv ./docker/docker /usr/local/bin \
 && chmod +x /usr/local/bin/docker \
 && rm -rf /tmp/*
+
+RUN yum install unzip -y
+RUN curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+RUN unzip awscli-bundle.zip
+RUN sudo ln -fs /usr/local/bin/python3.7 /usr/bin/python
+RUN sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+RUN aws --version
+RUN rm awscli-bundle.zip
+
+ADD deploy /
+ADD pkg /
+ADD railgun /
+ADD test /
+
