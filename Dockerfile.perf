@@ -35,6 +35,8 @@ RUN echo "root:root" | chpasswd
 RUN echo "centos:centos" | chpasswd
 RUN echo "centos ALL=(ALL) ALL" > /etc/sudoers
 RUN echo "centos ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers
+RUN echo "root ALL=(ALL) ALL" > /etc/sudoers
+RUN echo "root ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers
 
 ARG DOCKER_CLIENT=docker-20.10.2.tgz
 
