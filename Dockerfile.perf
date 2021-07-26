@@ -12,11 +12,12 @@ RUN rpm -e --nodeps python
 RUN wget https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz && tar xzf Python-3.7.2.tgz
 RUN cd Python-3.7.2 && ./configure --enable-optimizations && make altinstall
 RUN rm Python-3.7.2.tgz
-RUN sudo ln -s /usr/bin/python3.7 /usr/bin/python
 
 USER root
 RUN yum install dnf -y
 RUN yum install sudo -y
+RUN sudo ln -s /usr/bin/python3.7 /usr/bin/python
+
 RUN sudo yum -y install epel-release
 RUN sudo yum -y install jq -y
 
