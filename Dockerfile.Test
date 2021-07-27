@@ -1,4 +1,5 @@
 FROM centos:7
+
 RUN yum -y --enablerepo=extras install epel-release && yum clean all && yum -y update
 RUN yum -y install wget
 RUN yum -y install make
@@ -39,14 +40,27 @@ RUN echo "root ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers
 
 RUN sudo yum install git -y
 
-RUN sudo wget https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz
-RUN sudo tar -C /usr/local -xzf go1.6.linux-amd64.tar.gz
-RUN export PATH=$PATH:/usr/local/go/bin
-RUN sudo -s source ~/.bash_profile
-RUN sudo mkdir -p ~/go
+RUN sudo wget https://golang.org/dl/go1.16.6.linux-amd64.tar.gz
+RUN sudo tar -C /usr/local -xzf go1.16.6.linux-amd64.tar.gz
+
+ENV GOPATH $HOME/go
+ENV GOROOT="/usr/local/go"
+ENV GOBIN="/root/go/bin"
+ENV PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/
+
+RUN sudo mkdir -p $HOME/go
+ADD src/ $HOME/go/src
+ADD pkg/ $HOME/go/pkg
+ADD bin/ $HOME/go/bin
+RUN sudo chmod 777 $HOME/go/src
+RUN sudo chmod 777 $HOME/go/pkg
+RUN sudo chmod 777 $HOME/go/bin
+
+RUN curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.10.0/kind-linux-amd64
+RUN chmod +x kind
+RUN sudo mv kind /usr/local/bin/
 
 ARG DOCKER_CLIENT=docker-20.10.2.tgz
-
 RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86_64/docker-20.10.2.tgz\
 && tar zxf docker-20.10.2.tgz \
 && mkdir -p /usr/local/bin \
@@ -57,14 +71,13 @@ RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86
 RUN yum install unzip -y
 RUN curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
 RUN unzip awscli-bundle.zip
-
+# aws only use python3.7
 RUN sudo ln -fs /usr/local/bin/python3.7 /usr/bin/python
-
 RUN sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 RUN aws --version
 RUN rm awscli-bundle.zip
 
-ADD deploy /deploy
-ADD pkg /pkg
-ADD railgun /railgun
-ADD test /test
+WORKDIR $HOME/go/src/github.com/kong/kubernetes-ingress-controller
+ADD go.mod .
+ADD go.sum .
+RUN GO111MODULE=on go mod download
