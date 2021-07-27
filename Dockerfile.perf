@@ -8,7 +8,7 @@ RUN yum install libffi-devel -y
 RUN yum install openssl-devel -y
 RUN wget https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz && tar xzf Python-3.7.2.tgz
 RUN cd Python-3.7.2 && ./configure --enable-optimizations && make altinstall
-RUN rm Python-3.7.2.tgz
+RUN sudo rm Python-3.7.2.tgz
 
 USER root
 RUN yum install dnf -y
@@ -38,6 +38,14 @@ RUN echo "centos ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers
 RUN echo "root ALL=(ALL) ALL" > /etc/sudoers
 RUN echo "root ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers
 
+RUN sudo install git -y
+
+RUN wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
+RUN sudo tar -C /usr/local -xzf go1.13.linux-amd64.tar.gz
+RUN export PATH=$PATH:/usr/local/go/bin
+RUN sudo source ~/.bash_profile
+RUN sudo mkdir ~/go
+
 ARG DOCKER_CLIENT=docker-20.10.2.tgz
 
 RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86_64/docker-20.10.2.tgz\
@@ -50,13 +58,14 @@ RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86
 RUN yum install unzip -y
 RUN curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
 RUN unzip awscli-bundle.zip
+
 RUN sudo ln -fs /usr/local/bin/python3.7 /usr/bin/python
+
 RUN sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 RUN aws --version
 RUN rm awscli-bundle.zip
 
-ADD deploy /
-ADD pkg /
-ADD railgun /
-ADD test /
-
+ADD deploy /deploy
+ADD pkg /pkg
+ADD railgun /railgun
+ADD test /test
