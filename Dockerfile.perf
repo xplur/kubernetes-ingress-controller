@@ -8,7 +8,6 @@ RUN yum install libffi-devel -y
 RUN yum install openssl-devel -y
 RUN wget https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz && tar xzf Python-3.7.2.tgz
 RUN cd Python-3.7.2 && ./configure --enable-optimizations && make altinstall
-RUN sudo rm Python-3.7.2.tgz
 
 USER root
 RUN yum install dnf -y
@@ -44,7 +43,7 @@ RUN wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
 RUN sudo tar -C /usr/local -xzf go1.13.linux-amd64.tar.gz
 RUN export PATH=$PATH:/usr/local/go/bin
 RUN sudo source ~/.bash_profile
-RUN sudo mkdir ~/go
+RUN sudo mkdir -p ~/go
 
 ARG DOCKER_CLIENT=docker-20.10.2.tgz
 
