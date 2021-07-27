@@ -39,10 +39,10 @@ RUN echo "root ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers
 
 RUN sudo yum install git -y
 
-RUN sudo wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
-RUN sudo tar -C /usr/local -xzf go1.13.linux-amd64.tar.gz
+RUN sudo wget https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz
+RUN sudo tar -C /usr/local -xzf go1.6.linux-amd64.tar.gz
 RUN export PATH=$PATH:/usr/local/go/bin
-RUN sudo source ~/.bash_profile
+RUN sudo -s source ~/.bash_profile
 RUN sudo mkdir -p ~/go
 
 ARG DOCKER_CLIENT=docker-20.10.2.tgz
