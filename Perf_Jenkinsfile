@@ -8,7 +8,7 @@ pipeline {
 
     agent {
         dockerfile {
-            filename 'Dockerfile.perf'
+            filename 'Dockerfile.Test'
             args '--volume-driver=nfs --privileged -v /var/lib/jenkins:/var/lib/jenkins'
         }
     }
