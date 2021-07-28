@@ -6,53 +6,29 @@ nodesByLabel('master').each {
     node(it) {
       stage("preparation@${it}") {
 
-        sh('sudo yum install git -y')
-        //sh('sudo growpart /dev/nvme0n1 2 && sudo xfs_growfs -d /')
+        sh('whoami')
         sh('lsblk')
-        //sh('sudo mkdir -p /tmp/etcd && sudo chmod -R 777 /tmp/etcd')
 
         dir('/home/centos/go/src/github.com/kong/kubernetes-ingress-controller') {
             checkout scm
         }
 
-        //sh('cd /home/centos/workspace/exhaust-master && export ONBOARD=true && export WORKSPACE=/home/centos/workspace/exhaust-master && python3.7 library/pyfra.py --tests-dir setup/client_cluster --log-dir . --debug --clusters jjmm-black-cl2-dev-st --cluster-type EKS --csp-token  --clusters-per-tenant 1 --apps-per-cluster 18')
+        sh('sudo chmod -R 777 /home/centos/go/src/github.com/kong/kubernetes-ingress-controller')
+        sh(' creating test cluster ...')
+        sh('cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && make test.integration.cluster')
 
-//         sh('curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.8.1/kind-linux-amd64')
-//         sh('chmod +x kind')
-//         sh('echo "" > kind.config')
-//         sh('''cat <<EOF | sudo tee kind.config
-// ---
-// apiVersion: kind.x-k8s.io/v1alpha4
-// kind: Cluster
-// nodes: 
-//   - role: control-plane
-//   - role: worker
-//   - role: worker
-//   - role: worker
-//   - role: worker
-// kubeadmConfigPatches:
-// - |
-//   kind: ClusterConfiguration
-//   metadata:
-//     name: config
-//   etcd:
-//     local:
-//       dataDir: "/tmp/etcd"
-//         ''')
-//         sh('sudo chmod -R 777 /home/centos/workspace/exhaust-master')
+        sh('building docker iamge if not yet.')
+        sh('docker build -t 477502 -f Dockerfile.Test .')
 
-        // sh('docker build -t 477502 -f Dockerfile .')
-        // sh('docker run --name execution -t -d -u 997:994 --volume-driver=nfs --network=host --privileged -v /home/centos/workspace/exhaust-master:/home/centos/workspace/exhaust-master -v /var/run/docker.sock:/var/run/docker.sock 477502:latest')
+        sh('compose docker container.')
+        sh('docker run --name execution -t -d -u 997:994 --volume-driver=nfs --network=host --privileged -v /home/centos/go:/home/centos/go -v /var/run/docker.sock:/var/run/docker.sock 477502:latest')
 
-//        sh('''/home/centos/workspace/exhaust-master/kind get clusters | xargs /home/centos/workspace/exhaust-master/kind delete clusters''')
-        //def uuid1 = Math.abs(new Random().nextInt() % 30000000) + 1
-        //sh('''/home/centos/workspace/exhaust-master/kind create cluster --name cls-21-24-'''+ uuid1 +''' --config /home/centos/workspace/exhaust-master/kind.config''')
-
-        // def uuid2 = Math.abs(new Random().nextInt() % 550000) + 1
-        // sh('''/home/centos/workspace/exhaust-master/kind create cluster --name cls-21-24-'''+ uuid2 + ''' --config /home/centos/workspace/exhaust-master/kind.config''')
+        sh('deploy controller into namesapce kong.')
+        sh('''docker exec -i execution /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml''')
         
-        // sh('''docker exec -i execution /bin/bash -c "cd /home/centos/workspace/exhaust-master && export ONBOARD=true && export WORKSPACE=/home/centos/workspace/exhaust-master && python3.7 library/pyfra.py --tests-dir setup/client_cluster --cluster-type kind --clusters cls-21-24-''' + uuid1+''',cls-21-24-'''+uuid2+''' --log-dir . --debug --csp-token  --clusters-per-tenant 1 --apps-per-cluster 18"''')
-        //sh('''docker exec -i execution /bin/bash -c "cd /home/centos/workspace/exhaust-master && export ONBOARD=true && export WORKSPACE=/home/centos/workspace/exhaust-master && python3.7 library/pyfra.py --tests-dir setup/client_cluster --cluster-type EKS --clusters jjmm-black-cl1-dev-st --log-dir . --debug --csp-token  --clusters-per-tenant 1 --apps-per-cluster 18"''')        
+        sh('kick off test cases.')
+        sh('''docker exec -i execution /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && 
+        GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v''')        
 
         }
     }
