@@ -68,8 +68,8 @@ pipeline {
                         timeOutException = null
                         timeout(time: 300, unit: 'MINUTES') {
                            try{
-                                echo 'Test KIC incluster deployment'
-                                // sh 'kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml'
+                                echo 'deploy KIC using kustomization all-in-one-dbless.'
+                                sh 'kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml'
                             } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
                                 timeOutException = e
                                 retryKICDeployment = retryKICDeployment + 1
@@ -101,8 +101,8 @@ pipeline {
                         timeOutException = null
                         timeout(time: 300, unit: 'MINUTES') {
                            try{
-                                echo 'Test Ingress Controller Performance'
-                                sh 'TEST_MODE="true" TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test ./test/performance/ -v -timeout 9999s'
+                                echo 'Test Ingress Controller '
+                                sh 'export KIND_CLUSTER="0c80c58d-e437-4e5f-bc6e-957e6bafbcc1" && TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test ./test/performance/ -v -timeout 9999s'
                             } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
                                 timeOutException = e
                                 retryIngressTests = retryIngressTests + 1
