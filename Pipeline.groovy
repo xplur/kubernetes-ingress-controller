@@ -19,8 +19,7 @@ nodesByLabel('master').each {
         sh('sudo chmod -R 777 /home/centos/go/src/github.com/kong/kubernetes-ingress-controller')
         
         sh('echo "creating test cluster ..." ')
-        sh('export GOPATH=/home/centos/go && export GOROOT="/usr/local/go" && export GOBIN="/home/centos/go/bin" && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ &&
-            cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && make test.integration.cluster')
+        sh('export GOPATH=/home/centos/go && export GOROOT="/usr/local/go" && export GOBIN="/home/centos/go/bin" && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && make test.integration.cluster')
 
         sh('echo "building docker iamge if not yet."')
         sh('docker build -t 477502 -f Dockerfile.Test .')
@@ -32,9 +31,9 @@ nodesByLabel('master').each {
         sh('''docker exec -i execution /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml''')
         
         sh('echo "kick off test cases."')
-        sh('''docker exec -i execution /bin/bash -c "export GOPATH=/home/centos/go && export GOROOT="/usr/local/go" && export GOBIN="/home/centos/go/bin" && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ &&
-        cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && 
-        GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v''')        
+        sh('''docker exec -i execution /bin/bash -c "export GOPATH=/home/centos/go && export GOROOT="/usr/local/go" && export GOBIN="/home/centos/go/bin" && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && '''
+        '''cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && '''
+        '''GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v''')        
 
         }
     }
