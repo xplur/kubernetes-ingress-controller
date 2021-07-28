@@ -69,7 +69,7 @@ pipeline {
                         timeout(time: 300, unit: 'MINUTES') {
                            try{
                                 echo 'Test KIC incluster deployment'
-                                sh 'kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml'
+                                // sh 'kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml'
                             } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
                                 timeOutException = e
                                 retryKICDeployment = retryKICDeployment + 1
