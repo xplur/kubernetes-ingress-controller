@@ -28,10 +28,10 @@ nodesByLabel('master').each {
         sh('docker run --name jenkins -t -d -u 997:994 --volume-driver=nfs --network=host --privileged -v /home/centos/go:/home/centos/go -v /var/run/docker.sock:/var/run/docker.sock 477502:latest')
 
         sh('echo "deploy controller into kong namespace."')
-        sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml''')
+        sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml"''')
         
         sh('echo "kick off test cases."')
-        sh('''docker exec -i jenkins /bin/bash -c "export GOPATH=/home/centos/go && export GOROOT="/usr/local/go" && export GOBIN="/home/centos/go/bin" && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v''')        
+        sh('''docker exec -i jenkins /bin/bash -c "export GOPATH=/home/centos/go && export GOROOT="/usr/local/go" && export GOBIN="/home/centos/go/bin" && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v"''')        
 
         }
     }
