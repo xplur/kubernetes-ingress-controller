@@ -48,10 +48,9 @@ ENV GOROOT="/usr/local/go"
 ENV GOBIN="/root/go/bin"
 ENV PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/:/usr/local/go/bin
 
-RUN sudo mkdir -p $HOME/go
-ADD src/ $HOME/go/src
-ADD pkg/ $HOME/go/pkg
-ADD bin/ $HOME/go/bin
+RUN sudo mkdir -p $HOME/go/src
+RUN sudo mkdir -p $HOME/go/pkg
+RUN sudo mkdir -p  $HOME/go/bin
 RUN sudo chmod 777 $HOME/go/src
 RUN sudo chmod 777 $HOME/go/pkg
 RUN sudo chmod 777 $HOME/go/bin
