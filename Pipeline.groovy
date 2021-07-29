@@ -20,10 +20,10 @@ nodesByLabel('master').each {
         
         sh('echo "creating test cluster ..." ')
         sh('whoami')
-        sh('export GOPATH=/home/centos/go && export GOROOT=/usr/local/go && export GOBIN=/home/centos/go/bin && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && make test.integration.cluster')
+        //sh('export GOPATH=/home/centos/go && export GOROOT=/usr/local/go && export GOBIN=/home/centos/go/bin && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && make test.integration.cluster')
 
         sh('echo "building docker iamge if not yet."')
-        sh('docker build -t 477502 -f Dockerfile.Test .')
+        sh('cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && docker build -t 477502 -f Dockerfile.Test .')
 
         sh('echo "compose docker container."')
         sh('docker run --name jenkins -t -d -u 997:994 --volume-driver=nfs --network=host --privileged -v /home/centos/go:/home/centos/go -v /var/run/docker.sock:/var/run/docker.sock 477502:latest')
