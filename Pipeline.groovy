@@ -26,7 +26,7 @@ nodesByLabel('master').each {
         //sh('cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && docker build -t 477502 -f Dockerfile.Test .')
 
         sh('echo "compose docker container."')
-        sh('docker run --name jenkins -t -d --user root --volume-driver=nfs --network=host --privileged -v /bin:/bin -v /root:/root -v /usr/local/bin:/usr/local/bin -v /home/centos:/home/centos -v /var/run/docker.sock:/var/run/docker.sock 477502:latest')
+        sh('docker run --name jenkins -t -d --user root --volume-driver=nfs --network=host --privileged -v /bin:/bin -v /etc/sysconfig/docker:/etc/sysconfig/docker -v /root:/root -v /usr/local/bin:/usr/local/bin -v /home/centos:/home/centos -v /var/run/docker.sock:/var/run/docker.sock 477502:latest')
 
         sh('echo "deploy controller into kong namespace."')
         //sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml"''')
