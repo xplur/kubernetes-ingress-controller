@@ -26,13 +26,13 @@ nodesByLabel('master').each {
         //sh('cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && docker build -t 477502 -f Dockerfile.Test .')
 
         sh('echo "compose docker container."')
-        sh('docker run --name jenkins -t -d --user root --volume-driver=nfs --network=host --privileged -v /root:/root -v /home/centos:/home/centos -v /var/run/docker.sock:/var/run/docker.sock 477502:latest')
+        sh('docker run --name jenkins -t -d --user root --volume-driver=nfs --network=host --privileged -v /root:/root -v /usr/local/bin:/usr/local/bin -v /home/centos:/home/centos -v /var/run/docker.sock:/var/run/docker.sock 477502:latest')
 
         sh('echo "deploy controller into kong namespace."')
         sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml"''')
         
         sh('echo "kick off test cases."')
-        sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller export KIND_CLUSTER="1ef180bf-bb4f-4381-884f-a1c66b6f08a5" GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v"''')        
+        sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && export KIND_CLUSTER="1ef180bf-bb4f-4381-884f-a1c66b6f08a5" && GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v --timeout 9999s"''')        
 
         }
     }
