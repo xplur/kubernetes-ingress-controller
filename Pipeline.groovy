@@ -30,8 +30,8 @@ nodesByLabel('master').each {
         sh('echo "deploy controller into kong namespace."')
         sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml"''')
         
-        sh('echo "kick off test cases."')
-        sh('''docker exec -i jenkins /bin/bash -c "GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v"''')        
+        //sh('echo "kick off test cases."')
+        //sh('''docker exec -i jenkins /bin/bash -c "GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v"''')        
 
         }
     }

@@ -31,6 +31,7 @@ RUN groupadd -g $GROUP_ID centos && \
 RUN echo "root:root" | chpasswd
 RUN echo "centos:centos" | chpasswd
 RUN echo "centos ALL=(ALL) ALL" >> /etc/sudoers
+RUN echo "centos ALL=(ALL) ALL" >> /etc/sudoers
 RUN echo "centos ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 RUN echo "root ALL=(ALL) ALL" >> /etc/sudoers
 RUN echo "root ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -40,9 +41,9 @@ RUN sudo yum install git -y
 RUN wget https://golang.org/dl/go1.16.6.linux-amd64.tar.gz
 RUN tar -C /usr/local -xzf go1.16.6.linux-amd64.tar.gz
 
-ENV GOPATH $HOME/go
+ENV GOPATH /home/centos/go
 ENV GOROOT "/usr/local/go"
-ENV GOBIN "/root/go/bin"
+ENV GOBIN "/home/centos/go/bin"
 ENV PATH $PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/:/usr/local/go/bin
 
 ARG DOCKER_CLIENT=docker-20.10.2.tgz
