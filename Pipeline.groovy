@@ -19,6 +19,7 @@ nodesByLabel('master').each {
         sh('sudo chmod -R 777 /home/centos/go/src/github.com/kong/kubernetes-ingress-controller')
         
         sh('echo "creating test cluster ..." ')
+        sh('whoami')
         sh('cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && make test.integration.cluster')
 
         sh('echo "building docker iamge if not yet."')
