@@ -45,10 +45,6 @@ ENV GOROOT "/usr/local/go"
 ENV GOBIN "/root/go/bin"
 ENV PATH $PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/:/usr/local/go/bin
 
-RUN curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.10.0/kind-linux-amd64
-RUN chmod +x kind
-RUN sudo mv kind /usr/local/bin/
-
 ARG DOCKER_CLIENT=docker-20.10.2.tgz
 RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86_64/docker-20.10.2.tgz\
 && tar zxf docker-20.10.2.tgz \
