@@ -27,7 +27,7 @@ const (
 	httpcTimeout      = time.Second * 3
 	httpBinImage      = "kennethreitz/httpbin"
 	ingressClass      = "kong"
-	max_ingress       = 5
+	max_ingress       = 100
 )
 
 var (
