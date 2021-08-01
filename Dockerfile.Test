@@ -53,3 +53,7 @@ RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86
 && mv ./docker/docker /usr/local/bin \
 && chmod +x /usr/local/bin/docker \
 && rm -rf /tmp/*
+
+RUN wget https://get.helm.sh/helm-v3.6.3-linux-arm64.tar.gz
+RUN sudo tar -zxvf helm-v3.0.0-linux-amd64.tar.gz
+RUN mv linux-amd64/helm /usr/local/bin/helm
