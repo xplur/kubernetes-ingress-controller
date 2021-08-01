@@ -54,14 +54,23 @@
   [#1509](https://github.com/Kong/kubernetes-ingress-controller/pull/1509)
 - Added scripts to generate 2.x manifests.
   [#1563](https://github.com/Kong/kubernetes-ingress-controller/pull/1563)
+- Added support for --dump-config to 2.x.
+  [#1589](https://github.com/Kong/kubernetes-ingress-controller/pull/1589)
 
 #### Fixed
 
+- Increased the default timeout strategy for backend proxy HTTP requests
+  from 3 seconds to 10 seconds.
+  [#1610](https://github.com/Kong/kubernetes-ingress-controller/pull/1610)
 - Corrected the old Ingress v1beta1 API group.
   [#1584](https://github.com/Kong/kubernetes-ingress-controller/pull/1584)
 
 #### Under the hood
 
+- Code for the previous v1.x releases of the Kubernetes Ingress Controller
+  have been removed. Maintenance of the v1.x era codebase lives on in the
+  `1.3.x` and related branches going forward.
+  [#1591](https://github.com/Kong/kubernetes-ingress-controller/issues/1591)
 - New `v1` versions of `CustomResourceDefinitions` introduced for KIC 2.0 are now
   backwards compatible with the previous `v1beta1` CRD definitions (i.e. `v1beta1 -> v1`
   upgrades of KIC's CustomResourceDefinitions now work fully automatically). In practice
