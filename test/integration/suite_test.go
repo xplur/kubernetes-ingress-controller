@@ -321,22 +321,18 @@ func deployControllers(ctx context.Context, namespace string) error {
 			}
 		}
 
+		// if set, allow running the legacy controller for the tests instead of the current controller
+
 		config := manager.Config{}
 		flags := config.FlagSet()
 		if err := flags.Parse([]string{
 			fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 			fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 			"--controller-kongstate=enabled",
-			"--controller-ingress-networkingv1=enabled",
-			"--controller-ingress-networkingv1beta1=enabled",
-			"--controller-ingress-extensionsv1beta1=enabled",
 			"--controller-tcpingress=enabled",
 			"--controller-kongingress=enabled",
-			"--controller-knativeingress=enabled",
-			"--controller-kongclusterplugin=enabled",
 			"--controller-kongplugin=enabled",
 			"--controller-kongconsumer=disabled",
-			"--dump-config",
 			"--election-id=integrationtests.konghq.com",
 			"--publish-service=kong-system/ingress-controller-kong-proxy",
 			fmt.Sprintf("--watch-namespace=%s", watchNamespaces),
