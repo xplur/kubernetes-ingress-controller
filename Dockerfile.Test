@@ -46,6 +46,9 @@ ENV GOROOT "/usr/local/go"
 ENV GOBIN "/home/centos/go/bin"
 ENV PATH $PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/:/usr/local/go/bin
 
+RUN cd /tmp/ && wget https://get.helm.sh/helm-v3.6.3-linux-arm64.tar.gz\
+&& tar -zxvf helm-v3.6.3-linux-arm64.tar.gz && mv ./linux-amd64/helm /usr/local/bin/helm
+
 ARG DOCKER_CLIENT=docker-20.10.2.tgz
 RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86_64/docker-20.10.2.tgz\
 && tar zxf docker-20.10.2.tgz \
@@ -54,4 +57,3 @@ RUN cd /tmp/ && curl -sSL -O https://download.docker.com/linux/static/stable/x86
 && chmod +x /usr/local/bin/docker \
 && rm -rf /tmp/*
 
-RUN cd /tmp/ && wget https://get.helm.sh/helm-v3.6.3-linux-arm64.tar.gz && tar -zxvf helm-v3.6.3-linux-arm64.tar.gz && mv /tmp/linux-amd64/helm /usr/local/bin/helm
