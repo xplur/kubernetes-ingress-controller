@@ -6,21 +6,21 @@ nodesByLabel('master').each {
     node(it) {
       stage("preparation@${it}") {
 
-        sh('whoami')
-        sh('lsblk')
+        // sh('whoami')
+        // sh('lsblk')
 
-        sh('echo "sync code from test branch ..."')
-        dir('/home/centos/go/src/github.com/kong/kubernetes-ingress-controller') {
-            checkout scm
-        }
+        // sh('echo "sync code from test branch ..."')
+        // dir('/home/centos/go/src/github.com/kong/kubernetes-ingress-controller') {
+        //     checkout scm
+        // }
 
         //sh('export GOPATH=/home/centos/go && export GOROOT=/usr/local/go && export GOBIN=/home/centos/go/bin && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/')
         
         //sh('sudo chmod -R 777 /home/centos/go/src/github.com/kong/kubernetes-ingress-controller')
         
         sh('echo "creating test cluster ..." ')
-        sh('whoami')
-        sh('export GOPATH=/home/centos/go && export GOROOT=/usr/local/go && export GOBIN=/home/centos/go/bin && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && make test.integration.cluster')
+        //sh('whoami')
+        //sh('export GOPATH=/home/centos/go && export GOROOT=/usr/local/go && export GOBIN=/home/centos/go/bin && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/')
 
         sh('echo "building docker iamge if not yet."')
         sh('cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && docker build -t 477502 -f Dockerfile.Test .')
@@ -32,7 +32,7 @@ nodesByLabel('master').each {
         sh('''docker exec -i jenkins /bin/bash -c "kubectl apply -f /home/centos/deployment/all-in-one-postgres.yaml"''')
         
         sh('echo "kick off test cases."')
-        //sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && export KIND_CLUSTER="1ef180bf-bb4f-4381-884f-a1c66b6f08a5" && GO111MODULE=on TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v --timeout 9999s"''')        
+        sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && KIND_KEEP_CLUSTER="true" GO111MODULE=on GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v --timeout 9999s"''')        
 
         }
     }
