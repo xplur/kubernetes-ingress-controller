@@ -9,7 +9,7 @@ pipeline {
     agent {
         dockerfile {
             filename 'Dockerfile.Test'
-            args '--volume-driver=nfs --privileged -v /var/lib/jenkins:/var/lib/jenkins'
+            args '--volume-driver=nfs --network=host --privileged -v /home/centos:/home/centos -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
@@ -37,7 +37,7 @@ pipeline {
                         timeout(time: 30, unit: 'MINUTES') {
                            try{
                                 echo 'Skip Test Deployed Cluster'
-                                //sh 'cd railgun && make test.integration.cluster'
+                                sh 'cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && make test.integration.cluster'
                             } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
                                 timeOutException = e
                                 retryClusterDeployment = retryClusterDeployment + 1
@@ -69,7 +69,7 @@ pipeline {
                         timeout(time: 300, unit: 'MINUTES') {
                            try{
                                 echo 'deploy KIC using kustomization all-in-one-dbless.'
-                                sh 'kubectl apply -f deploy/single-v2/all-in-one-dbless.yaml'
+                                sh 'kubectl apply -f /home/centos/deployment/all-in-one-postgres.yaml'
                             } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
                                 timeOutException = e
                                 retryKICDeployment = retryKICDeployment + 1
@@ -102,7 +102,7 @@ pipeline {
                         timeout(time: 300, unit: 'MINUTES') {
                            try{
                                 echo 'Test Ingress Controller '
-                                sh 'export KIND_CLUSTER="0c80c58d-e437-4e5f-bc6e-957e6bafbcc1" && TEST_DATABASE_MODE="off" GOFLAGS="-tags=performance_tests" go test ./test/performance/ -v -timeout 9999s'
+                                sh 'cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller/railgun && export KONG_TEST_CLUSTER=kind:1d6118ad-0b1e-4d6b-a1de-fe4a85d2551b && GOFLAGS="-tags=performance_tests" go test ./test/performance/ -v -timeout 9999s'
                             } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
                                 timeOutException = e
                                 retryIngressTests = retryIngressTests + 1
