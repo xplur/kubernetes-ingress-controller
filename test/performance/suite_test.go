@@ -3,11 +3,13 @@
 package performance
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -90,10 +92,25 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "Error: could not get proxy URL from Kong Addon: %s", err.Error())
 		os.Exit(29)
 	}
+	fmt.Println("INFO: deploying kong and controller into kong namespace.")
 
+	deployKong("/home/centos/deployment/all-in-one-postgres.yaml", ctx, t)
 	fmt.Println("INFO: testing environment is ready, running tests")
 	code := m.Run()
 	os.Exit(code)
+}
+
+func deployKong(yml string, ctx context.Context, t *testing.T) error {
+	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stdout, stdout.String())
+		return err
+	}
+	t.Logf("successfully deploy manifest " + yml)
+	return nil
 }
 
 // CreateNamespace create customized namespace
