@@ -19,7 +19,7 @@ nodesByLabel('master').each {
         //sh('sudo chmod -R 777 /home/centos/go/src/github.com/kong/kubernetes-ingress-controller')
         
         sh('echo "creating test cluster ..." ')
-        sh('export GOPATH=/home/centos/go && export GOROOT=/usr/local/go && export GOBIN=/home/centos/go/bin && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/')
+        //sh('export GOPATH=/home/centos/go && export GOROOT=/usr/local/go && export GOBIN=/home/centos/go/bin && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/ && cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && GOFLAGS="-tags=integration_tests" go test -race -v -run "SuiteOnly" ./test/integration/')
 
         sh('echo "building docker iamge if not yet."')
         sh('cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && docker build -t 477502 -f Dockerfile.Test .')
