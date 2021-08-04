@@ -22,11 +22,11 @@ const (
 )
 
 func TestLoadingSecrets(t *testing.T) {
+	t.Skip()
 	t.Log("setting up the TestIngressPerf")
 	ctx := context.Background()
 	cluster := env.Cluster()
 	cnt := 1
-	var cost int64
 	for cnt <= secretsNumber {
 		namespace := fmt.Sprintf("secrets-%d", cnt)
 		err := CreateNamespace(ctx, namespace, t)
@@ -34,7 +34,6 @@ func TestLoadingSecrets(t *testing.T) {
 
 		deployK8SSecrets(cluster, namespace, ctx, t)
 		cnt += 1
-		t.Logf("ingress processing time %d nanosecond", cost/cnt)
 	}
 	t.Logf("loaded %d secrets into the cluster.", secretsNumber)
 }

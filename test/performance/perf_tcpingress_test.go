@@ -91,5 +91,5 @@ func TestTCPIngressPerformance(t *testing.T) {
 		}, 120*time.Second, 1*time.Second, true)
 		cnt += 1
 	}
-	t.Logf("tcp ingress average cost %d millisecond", cost/cnt/1000)
+	t.Logf("tcp ingress average cost %d millisecond", int(cost)/cnt/1000)
 }
