@@ -9,10 +9,10 @@ nodesByLabel('master').each {
         // sh('whoami')
         // sh('lsblk')
 
-        // sh('echo "sync code from test branch ..."')
-        // dir('/home/centos/go/src/github.com/kong/kubernetes-ingress-controller') {
-        //     checkout scm
-        // }
+        sh('echo "sync code from test branch ..."')
+        dir('/home/centos/go/src/github.com/kong/kubernetes-ingress-controller') {
+            checkout scm
+        }
 
         //sh('export GOPATH=/home/centos/go && export GOROOT=/usr/local/go && export GOBIN=/home/centos/go/bin && export PATH=$PATH:$GOROOT/bin:$GOBIN:$GOPATH:/usr/local/bin/')
         
