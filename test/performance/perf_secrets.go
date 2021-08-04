@@ -45,8 +45,8 @@ func deployK8SSecrets(namespace string, ctx context.Context, t *testing.T) error
 	}
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "memberlist",
-			Namespace: ns.Name,
+			Name:      "closepr",
+			Namespace: namespace,
 		},
 		StringData: map[string]string{
 			"secretkey": base64.StdEncoding.EncodeToString(secretKey),
