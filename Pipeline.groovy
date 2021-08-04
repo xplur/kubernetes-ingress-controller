@@ -32,7 +32,7 @@ nodesByLabel('master').each {
         //sh('''docker exec -i jenkins /bin/bash -c "kubectl apply -f /home/centos/deployment/all-in-one-postgres.yaml"''')
         
         sh('echo "kick off test cases."')
-        sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && GO111MODULE=on GOFLAGS="-tags=performance_tests" go test -run "TestIngressPerformance" ./test/performance/ -v --timeout 9999s"''')
+        sh('''docker exec -i jenkins /bin/bash -c "cd /home/centos/go/src/github.com/kong/kubernetes-ingress-controller && GO111MODULE=on GOFLAGS="-tags=performance_tests" go test ./test/performance/ -v --timeout 9999s"''')
 
         }
     }

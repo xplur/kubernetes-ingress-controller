@@ -25,7 +25,7 @@ func TestUDPIngressPerformance(t *testing.T) {
 	defer cancel()
 
 	cnt := 1
-	cost := 0
+	var cost int64
 	for cnt <= max_ingress {
 		testName := "minudp"
 		testUDPIngressNamespace := fmt.Sprintf("udpingress-%d", cnt)
@@ -84,7 +84,7 @@ func TestUDPIngressPerformance(t *testing.T) {
 		assert.NoError(t, err)
 		udp, err = c.ConfigurationV1beta1().UDPIngresses(testUDPIngressNamespace).Create(ctx, udp, metav1.CreateOptions{})
 		assert.NoError(t, err)
-		start_time := time.Now().Nanosecond()
+		start_time := time.Now()
 
 		t.Logf("checking udpingress %s status readiness.", udp.Name)
 		ingCli := c.ConfigurationV1beta1().UDPIngresses(testUDPIngressNamespace)
@@ -96,8 +96,7 @@ func TestUDPIngressPerformance(t *testing.T) {
 			ingresses := curIng.Status.LoadBalancer.Ingress
 			for _, ingress := range ingresses {
 				if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
-					end_time := time.Now().Nanosecond()
-					loop := end_time - start_time
+					loop := time.Since(start_time).Nanoseconds()
 					t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic after %d nanoseconds.", ingress.Hostname, ingress.IP, loop)
 					cost += loop
 					return true
@@ -107,7 +106,7 @@ func TestUDPIngressPerformance(t *testing.T) {
 		}, 120*time.Second, 1*time.Second, true)
 		cnt += 1
 	}
-	t.Logf("udp ingress average cost %d millisecond", cost/cnt/1000)
+	t.Logf("udp ingress average cost %d millisecond", int(cost)/cnt/1000)
 }
 
 const corefile = `

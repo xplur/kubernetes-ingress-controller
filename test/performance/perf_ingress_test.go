@@ -23,7 +23,7 @@ func TestIngressPerformance(t *testing.T) {
 	ctx := context.Background()
 	cluster := env.Cluster()
 	cnt := 1
-	cost := 0
+	var cost int64
 	for cnt <= max_ingress {
 		namespace := fmt.Sprintf("ingress-%d", cnt)
 		err := CreateNamespace(ctx, namespace, t)
@@ -47,7 +47,7 @@ func TestIngressPerformance(t *testing.T) {
 		}, service)
 		ingress, err = cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, ingress, metav1.CreateOptions{})
 		assert.NoError(t, err)
-		start_time := time.Now().Nanosecond()
+		start_time := time.Now()
 
 		t.Logf("waiting for updated ingress status to include IP")
 		require.Eventually(t, func() bool {
@@ -63,11 +63,10 @@ func TestIngressPerformance(t *testing.T) {
 		}, ingressWait, waitTick, true)
 
 		t.Logf("ingress %v", ingress.Status.LoadBalancer.Ingress)
-		end_time := time.Now().Nanosecond()
-		loop := end_time - start_time
+		loop := time.Since(start_time).Nanoseconds()
 		t.Logf("networkingv1 hostname is ready to redirect traffic after %d nanosecond.", loop)
-		cost += loop
+		cost += time.Since(start_time).Nanoseconds()
 		cnt += 1
 	}
-	t.Logf("ingress processing time %d nanosecond", cost/cnt)
+	t.Logf("ingress processing time %d nanosecond", int(cost)/cnt)
 }

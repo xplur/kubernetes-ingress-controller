@@ -50,7 +50,7 @@ func TestPerfKnativePerformance(t *testing.T) {
 	require.NoError(t, perfconfigKnativeDomain(ctx, proxy, cluster, t))
 
 	cnt := 1
-	cost := 0
+	var cost int64
 	for cnt <= max_ingress {
 		namespace := fmt.Sprintf("knative-%d", cnt)
 		err := CreateNamespace(ctx, namespace, t)
@@ -172,13 +172,13 @@ func perfconfigKnativeDomain(ctx context.Context, proxy string, cluster clusters
 	return nil
 }
 
-func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, namesapce string, cost *int, cluster clusters.Cluster) bool {
+func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, namesapce string, cost *int64, cluster clusters.Cluster) bool {
 	knativeCli, err := knativenetworkingversioned.NewForConfig(cluster.Config())
 	if err != nil {
 		return false
 	}
 	ingCli := knativeCli.NetworkingV1alpha1().Ingresses(namesapce)
-	s := time.Now().Second()
+	s := time.Now()
 	assert.Eventually(t, func() bool {
 		curIng, err := ingCli.Get(ctx, "helloworld-go", metav1.GetOptions{})
 		if err != nil || curIng == nil {
@@ -187,9 +187,9 @@ func perfaccessKnativeSrv(ctx context.Context, proxy string, t *testing.T, names
 		conds := curIng.Status.Status.GetConditions()
 		for _, cond := range conds {
 			if cond.Type == apis.ConditionReady && cond.Status == v1.ConditionTrue {
-				e := time.Now().Second()
-				t.Logf("knative ingress status is ready. cost %d seconds ", (e - s))
-				*cost += (e - s)
+				loop := time.Since(s).Nanoseconds()
+				t.Logf("knative ingress status is ready. cost %d nanoseconds ", loop)
+				*cost += loop
 				return true
 			}
 		}

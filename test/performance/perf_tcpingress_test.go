@@ -29,7 +29,7 @@ func TestTCPIngressPerformance(t *testing.T) {
 	defer cancel()
 
 	cnt := 1
-	cost := 0
+	var cost int64
 	for cnt <= max_ingress {
 		namespace := fmt.Sprintf("tcpingress-%d", cnt)
 		err := CreateNamespace(ctx, namespace, t)
@@ -70,7 +70,7 @@ func TestTCPIngressPerformance(t *testing.T) {
 		tcp, err = c.ConfigurationV1beta1().TCPIngresses(namespace).Create(ctx, tcp, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		start_time := time.Now().Nanosecond()
+		start_time := time.Now()
 		t.Logf("checking tcpingress %s status readiness.", tcp.Name)
 		ingCli := c.ConfigurationV1beta1().TCPIngresses(namespace)
 		assert.Eventually(t, func() bool {
@@ -81,8 +81,7 @@ func TestTCPIngressPerformance(t *testing.T) {
 			ingresses := curIng.Status.LoadBalancer.Ingress
 			for _, ingress := range ingresses {
 				if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
-					end_time := time.Now().Nanosecond()
-					loop := end_time - start_time
+					loop := time.Since(start_time).Nanoseconds()
 					t.Logf("tcpingress hostname %s or ip %s is ready to redirect traffic after %d nanoseconds .", ingress.Hostname, ingress.IP, loop)
 					cost += loop
 					return true

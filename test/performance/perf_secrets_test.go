@@ -26,7 +26,7 @@ func TestLoadingSecrets(t *testing.T) {
 	ctx := context.Background()
 	cluster := env.Cluster()
 	cnt := 1
-	cost := 0
+	var cost int64
 	for cnt <= secretsNumber {
 		namespace := fmt.Sprintf("secrets-%d", cnt)
 		err := CreateNamespace(ctx, namespace, t)
