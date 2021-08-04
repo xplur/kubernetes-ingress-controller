@@ -18,7 +18,7 @@ import (
 
 const (
 	secretKeyLen  = 128
-	secretsNumber = 2000
+	secretsNumber = 2
 )
 
 func TestLoadingSecrets(t *testing.T) {
@@ -36,7 +36,7 @@ func TestLoadingSecrets(t *testing.T) {
 		cnt += 1
 		t.Logf("ingress processing time %d nanosecond", cost/cnt)
 	}
-	t.Logf("loaded %s secrets into the cluster.", secretsNumber)
+	t.Logf("loaded %d secrets into the cluster.", secretsNumber)
 }
 
 func deployK8SSecrets(cluster clusters.Cluster, namespace string, ctx context.Context, t *testing.T) error {
