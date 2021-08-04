@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,14 +32,14 @@ func TestLoadingSecrets(t *testing.T) {
 		err := CreateNamespace(ctx, namespace, t)
 		assert.NoError(t, err)
 
-		deployK8SSecrets(namespace, ctx, t)
+		deployK8SSecrets(cluster, namespace, ctx, t)
 		cnt += 1
 		t.Logf("ingress processing time %d nanosecond", cost/cnt)
 	}
 	t.Logf("loaded %s secrets into the cluster.", secretsNumber)
 }
 
-func deployK8SSecrets(namespace string, ctx context.Context, t *testing.T) error {
+func deployK8SSecrets(cluster clusters.Cluster, namespace string, ctx context.Context, t *testing.T) error {
 	secretKey := make([]byte, secretKeyLen)
 	if _, err := rand.Read(secretKey); err != nil {
 		return err
@@ -58,5 +59,5 @@ func deployK8SSecrets(namespace string, ctx context.Context, t *testing.T) error
 			return err
 		}
 	}
-
+	return nil
 }
