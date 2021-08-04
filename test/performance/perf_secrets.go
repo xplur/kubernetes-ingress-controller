@@ -1,0 +1,62 @@
+//+build performance_tests
+
+package performance
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	secretKeyLen  = 128
+	secretsNumber = 2000
+)
+
+func TestLoadingSecrets(t *testing.T) {
+	t.Log("setting up the TestIngressPerf")
+	ctx := context.Background()
+	cluster := env.Cluster()
+	cnt := 1
+	cost := 0
+	for cnt <= secretsNumber {
+		namespace := fmt.Sprintf("secrets-%d", cnt)
+		err := CreateNamespace(ctx, namespace, t)
+		assert.NoError(t, err)
+
+		deployK8SSecrets(namespace, ctx, t)
+		cnt += 1
+		t.Logf("ingress processing time %d nanosecond", cost/cnt)
+	}
+	t.Logf("loaded %s secrets into the cluster.", secretsNumber)
+}
+
+func deployK8SSecrets(namespace string, ctx context.Context, t *testing.T) error {
+	secretKey := make([]byte, secretKeyLen)
+	if _, err := rand.Read(secretKey); err != nil {
+		return err
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "memberlist",
+			Namespace: ns.Name,
+		},
+		StringData: map[string]string{
+			"secretkey": base64.StdEncoding.EncodeToString(secretKey),
+		},
+	}
+	if _, err := cluster.Client().CoreV1().Secrets(namespace).Create(context.Background(), secret, metav1.CreateOptions{}); err != nil {
+		t.Logf("failed creating secrets within namespace %s err %v", namespace, err)
+		if !errors.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+}
