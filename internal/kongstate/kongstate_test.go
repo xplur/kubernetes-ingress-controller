@@ -1,8 +1,10 @@
 package kongstate
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
@@ -352,7 +354,10 @@ func Test_FillConsumersAndCredentials(t *testing.T) {
 		state := KongState{
 			Version: semver.MustParse("2.3.2"),
 		}
+		start := time.Now()
 		state.FillConsumersAndCredentials(logrus.New(), store)
+		cost := time.Since(start).Nanoseconds()
+		fmt.Printf("FillConsumersAndCredentials %d", cost)
 		assert.Equal(t, want.Consumers[0].Consumer.Username, state.Consumers[0].Consumer.Username)
 		assert.Equal(t, want.Consumers[0].Consumer.CustomID, state.Consumers[0].Consumer.CustomID)
 		assert.Equal(t, want.Consumers[0].KeyAuths[0].Key, state.Consumers[0].KeyAuths[0].Key)
