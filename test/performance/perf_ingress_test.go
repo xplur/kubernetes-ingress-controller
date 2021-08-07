@@ -18,6 +18,7 @@ import (
 )
 
 func TestIngressPerformance(t *testing.T) {
+	t.Parallel()
 	t.Log("setting up the TestIngressPerf")
 
 	ctx := context.Background()

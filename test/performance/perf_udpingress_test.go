@@ -20,6 +20,8 @@ import (
 )
 
 func TestUDPIngressPerformance(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithTimeout(context.Background(), ingressWait)
 	cluster := env.Cluster()
 	defer cancel()

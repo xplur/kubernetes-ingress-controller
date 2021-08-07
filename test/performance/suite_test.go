@@ -97,23 +97,28 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: deploying kong and controller into kong namespace.")
 
 	// deployKong("/home/centos/deployment/all-in-one-postgres.yaml", ctx, t)
+	setup()
 	fmt.Println("INFO: testing environment is ready, running tests")
 	code := m.Run()
 	os.Exit(code)
+	summary()
 }
 
-// func deployKong(yml string, ctx context.Context, t *testing.T) error {
-// 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
-// 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-// 	cmd.Stdout = stdout
-// 	cmd.Stderr = stderr
-// 	if err := cmd.Run(); err != nil {
-// 		fmt.Fprintln(os.Stdout, stdout.String())
-// 		return err
-// 	}
-// 	t.Logf("successfully deploy manifest " + yml)
-// 	return nil
-// }
+func setup() error {
+	// deploy kong into the cluster
+}
+
+func summary() {
+
+}
+
+func ConfigureMetrics(t *testing.T) error {
+
+}
+
+func DeployKIC(t *testing.T) error {
+	return nil
+}
 
 // CreateNamespace create customized namespace
 func CreateNamespace(ctx context.Context, namespace string, t *testing.T) error {

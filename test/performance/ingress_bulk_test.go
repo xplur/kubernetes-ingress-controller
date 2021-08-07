@@ -23,6 +23,7 @@ import (
 )
 
 func TestIngressBulk(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	ns := corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: corev1.NamespaceDefault}}
 

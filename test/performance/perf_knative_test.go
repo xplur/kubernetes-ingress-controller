@@ -33,6 +33,8 @@ const (
 )
 
 func TestPerfKnativePerformance(t *testing.T) {
+	t.Parallel()
+
 	proxy := proxyURL.Hostname()
 	assert.NotEmpty(t, proxy)
 	t.Logf("proxy url %s", proxy)

@@ -23,6 +23,7 @@ const (
 
 func TestLoadingSecrets(t *testing.T) {
 	t.Skip()
+
 	t.Log("setting up the TestIngressPerf")
 	ctx := context.Background()
 	cluster := env.Cluster()

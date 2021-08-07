@@ -20,6 +20,7 @@ import (
 )
 
 func TestTCPIngressPerformance(t *testing.T) {
+	t.Parallel()
 
 	t.Log("setting up the TestTCPPerformance tests")
 	cluster := env.Cluster()
