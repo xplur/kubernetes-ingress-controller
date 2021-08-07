@@ -113,7 +113,7 @@ func summary() error {
 	return nil
 }
 
-func ConfigureMetrics() error {
+func ConfigureMetrics(ctx context.Context) error {
 	DeployManifest("https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/master/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml", ctx)
 	DeployManifest("https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/config/prometheus/monitor.yaml", ctx)
 	return nil
