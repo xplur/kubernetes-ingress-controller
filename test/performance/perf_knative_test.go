@@ -3,14 +3,11 @@
 package performance
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
-	"os"
-	"os/exec"
 	"testing"
 	"time"
 
@@ -43,8 +40,8 @@ func TestPerfKnativePerformance(t *testing.T) {
 	cluster := env.Cluster()
 
 	t.Log("Deploying all resources that are required to run knative")
-	require.NoError(t, deployManifest(knativeCrds, ctx, t))
-	require.NoError(t, deployManifest(knativeCore, ctx, t))
+	require.NoError(t, DeployManifest(knativeCrds, ctx))
+	require.NoError(t, DeployManifest(knativeCore, ctx))
 	require.True(t, isKnativeReady(ctx, cluster, t), true)
 
 	t.Log("Configure Knative NetworkLayer as Kong")
@@ -73,20 +70,6 @@ func TestPerfKnativePerformance(t *testing.T) {
 		cnt++
 	}
 	t.Logf("knative ingress cost %d", cost/max_ingress)
-}
-
-// TODO: move to common utility functions
-func deployManifest(yml string, ctx context.Context, t *testing.T) error {
-	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", yml)
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stdout, stdout.String())
-		return err
-	}
-	t.Logf("successfully deploy manifest " + yml)
-	return nil
 }
 
 func perfcheckIPAddress(ip string, t *testing.T) bool {

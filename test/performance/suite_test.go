@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/config/prometheus"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
@@ -28,7 +29,7 @@ const (
 	httpcTimeout      = time.Second * 3
 	httpBinImage      = "kennethreitz/httpbin"
 	ingressClass      = "kong"
-	max_ingress       = 5000
+	max_ingress       = 10000
 )
 
 var (
@@ -96,7 +97,6 @@ func TestMain(m *testing.M) {
 	}
 	fmt.Println("INFO: deploying kong and controller into kong namespace.")
 
-	// deployKong("/home/centos/deployment/all-in-one-postgres.yaml", ctx, t)
 	setup()
 	fmt.Println("INFO: testing environment is ready, running tests")
 	code := m.Run()
@@ -104,8 +104,8 @@ func TestMain(m *testing.M) {
 	summary()
 }
 
-func setup() error {
-	// deploy kong into the cluster
+func setup(ctx context.Context) error {
+	DeployManifest("perf_kong_db.yaml", ctx)
 	return nil
 }
 
@@ -114,11 +114,13 @@ func summary() error {
 }
 
 func ConfigureMetrics(t *testing.T) error {
+	DeployManifest("https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/master/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml", ctx)
+	DeployManifest("https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/config/prometheus/monitor.yaml", ctx)
 	return nil
 }
 
-func DeployKIC(t *testing.T) error {
-	return nil
+func ScrapeMtrics() {
+	return
 }
 
 // CreateNamespace create customized namespace
