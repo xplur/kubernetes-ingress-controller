@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-testing-framework/config/prometheus"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
