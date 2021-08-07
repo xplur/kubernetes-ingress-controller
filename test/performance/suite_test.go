@@ -28,7 +28,7 @@ const (
 	httpcTimeout      = time.Second * 3
 	httpBinImage      = "kennethreitz/httpbin"
 	ingressClass      = "kong"
-	max_ingress       = 500
+	max_ingress       = 5000
 )
 
 var (
@@ -106,14 +106,15 @@ func TestMain(m *testing.M) {
 
 func setup() error {
 	// deploy kong into the cluster
+	return nil
 }
 
-func summary() {
-
+func summary() error {
+	return nil
 }
 
 func ConfigureMetrics(t *testing.T) error {
-
+	return nil
 }
 
 func DeployKIC(t *testing.T) error {
