@@ -28,7 +28,7 @@ const (
 	httpcTimeout      = time.Second * 3
 	httpBinImage      = "kennethreitz/httpbin"
 	ingressClass      = "kong"
-	max_ingress       = 10000
+	max_ingress       = 10
 )
 
 var (
@@ -105,6 +105,7 @@ func TestMain(m *testing.M) {
 
 func setup(ctx context.Context) error {
 	DeployManifest("perf_kong_db.yaml", ctx)
+	ConfigureMetrics(ctx)
 	return nil
 }
 
@@ -112,7 +113,7 @@ func summary() error {
 	return nil
 }
 
-func ConfigureMetrics(t *testing.T) error {
+func ConfigureMetrics() error {
 	DeployManifest("https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/master/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml", ctx)
 	DeployManifest("https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/main/config/prometheus/monitor.yaml", ctx)
 	return nil
