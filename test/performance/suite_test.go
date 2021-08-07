@@ -96,7 +96,7 @@ func TestMain(m *testing.M) {
 	}
 	fmt.Println("INFO: deploying kong and controller into kong namespace.")
 
-	setup()
+	setup(ctx)
 	fmt.Println("INFO: testing environment is ready, running tests")
 	code := m.Run()
 	os.Exit(code)
