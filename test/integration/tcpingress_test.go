@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/internal/annotations"
@@ -28,7 +27,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 	ns, cleanup := namespace(t)
 	defer cleanup()
 
-	t.Log("setting up the TCPIngress tests")
+	t.Logf("setting up the TCPIngress tests %s", ns)
 	testName := "tcpingress"
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -38,20 +37,20 @@ func TestTCPIngressEssentials(t *testing.T) {
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	defer func() {
-		t.Logf("cleaning up the deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	// defer func() {
+	// 	t.Logf("cleaning up the deployment %s", deployment.Name)
+	// 	assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
+	// }()
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	// defer func() {
+	// 	t.Logf("cleaning up the service %s", service.Name)
+	// 	assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
+	// }()
 
 	t.Logf("routing to service %s via TCPIngress", service.Name)
 	tcp := &kongv1beta1.TCPIngress{
@@ -76,14 +75,14 @@ func TestTCPIngressEssentials(t *testing.T) {
 	}
 	tcp, err = c.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
 	require.NoError(t, err)
-	defer func() {
-		t.Logf("ensuring that TCPIngress %s is cleaned up", tcp.Name)
-		if err := c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	// defer func() {
+	// 	t.Logf("ensuring that TCPIngress %s is cleaned up", tcp.Name)
+	// 	if err := c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
+	// 		if !errors.IsNotFound(err) {
+	// 			require.NoError(t, err)
+	// 		}
+	// 	}
+	// }()
 
 	t.Logf("checking tcpingress %s status readiness.", tcp.Name)
 	ingCli := c.ConfigurationV1beta1().TCPIngresses(ns.Name)
@@ -104,6 +103,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 
 	t.Logf("verifying TCP Ingress %s operationalable", tcp.Name)
 	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", proxyURL.Hostname()))
+	t.Logf("tcpProxyURL %s ", tcpProxyURL.String())
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
 		resp, err := httpc.Get(tcpProxyURL.String())
@@ -123,14 +123,14 @@ func TestTCPIngressEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Logf("tearing down TCPIngress %s and ensuring that the relevant backend routes are removed", tcp.Name)
-	require.NoError(t, c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
-	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(tcpProxyURL.String())
-		if err != nil {
-			return true
-		}
-		defer resp.Body.Close()
-		return false
-	}, ingressWait, waitTick)
+	// t.Logf("tearing down TCPIngress %s and ensuring that the relevant backend routes are removed", tcp.Name)
+	// require.NoError(t, c.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
+	// require.Eventually(t, func() bool {
+	// 	resp, err := httpc.Get(tcpProxyURL.String())
+	// 	if err != nil {
+	// 		return true
+	// 	}
+	// 	defer resp.Body.Close()
+	// 	return false
+	// }, ingressWait, waitTick)
 }
