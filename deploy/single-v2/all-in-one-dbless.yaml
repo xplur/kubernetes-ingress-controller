@@ -1328,6 +1328,8 @@ spec:
     metadata:
       annotations:
         kuma.io/gateway: enabled
+        prometheus.io/port: "9090"
+        prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
         app: ingress-kong
@@ -1391,51 +1393,5 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
-      - env:
-        - name: CONTROLLER_KONG_ADMIN_URL
-          value: https://127.0.0.1:8444
-        - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
-          value: "true"
-        - name: CONTROLLER_PUBLISH_SERVICE
-          value: kong/kong-proxy
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.name
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.0.0-beta.1
-        imagePullPolicy: IfNotPresent
-        livenessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /healthz
-            port: 10254
-            scheme: HTTP
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-        name: ingress-controller
-        ports:
-        - containerPort: 8080
-          name: webhook
-          protocol: TCP
-        - containerPort: 10255
-          name: cmetrics
-          protocol: TCP
-        readinessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /readyz
-            port: 10254
-            scheme: HTTP
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
       serviceAccountName: kong-serviceaccount
+
