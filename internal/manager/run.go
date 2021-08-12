@@ -51,7 +51,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	// retrieve proxy url which
-	cmd := exec.Command("kubectl", "-n", "kong", "get", "service", "kong-proxy", "-o", "jsonpath='{.status.loadBalancer.ingress[0].ip}'")
+	cmd := exec.Command("kubectl", "-n", "kong", "get", "service", "kong-proxy", "-o", "jsonpath={.status.loadBalancer.ingress[0].ip}")
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
