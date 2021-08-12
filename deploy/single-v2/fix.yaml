@@ -13,6 +13,7 @@ spec:
     port: 8001
     protocol: TCP
     targetPort: 8001
+    nodePort: 32080
   selector:
     app: ingress-kong
   type: LoadBalancer

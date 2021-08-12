@@ -1290,6 +1290,7 @@ spec:
     port: 80
     protocol: TCP
     targetPort: 8000
+    nodePort: 30080
   - name: proxy-ssl
     port: 443
     protocol: TCP
