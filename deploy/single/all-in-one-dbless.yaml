@@ -674,6 +674,9 @@ spec:
         - containerPort: 8100
           name: metrics
           protocol: TCP
+        - containerPort: 8001
+          name: admin
+          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
