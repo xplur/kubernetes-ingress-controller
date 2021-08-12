@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: kong-ingress-controller
-  name: controller-manager
+  name: kong-ingress-controller
   namespace: kong
 spec:
   replicas: 1
