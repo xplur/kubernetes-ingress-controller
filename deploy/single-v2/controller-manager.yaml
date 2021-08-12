@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: ingress-kong
-  name: ingress-kong
+  name: controller-manager
   namespace: kong
 spec:
   replicas: 1
@@ -39,7 +39,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.namespace
         # origin/release-bug
-        image: jimin1/kic-release:v2.0.0-0810
+        image: jimin1/kic-release:v2.0.0-0812
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
