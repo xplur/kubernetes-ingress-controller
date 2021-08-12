@@ -1294,10 +1294,6 @@ spec:
     port: 443
     protocol: TCP
     targetPort: 8443
-  - name: admin
-    port: 8001
-    protocol: TCP
-    targetPort: 8001
   selector:
     app: ingress-kong
   type: LoadBalancer
