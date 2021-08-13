@@ -2,11 +2,8 @@
 package manager
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -50,20 +47,20 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	}
 
 	// retrieve proxy url which
-	cmd := exec.Command("kubectl", "-n", "kong", "get", "service", "kong-proxy", "-o", "jsonpath={.status.loadBalancer.ingress[0].ip}")
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	fmt.Printf("111111\n")
-	fmt.Fprintln(os.Stdout, stdout.String())
-	fmt.Fprintln(os.Stdout, stderr.String())
-	if err := cmd.Run(); err != nil {
-		return err
-	}
+	// cmd := exec.Command("kubectl", "-n", "kong", "get", "service", "kong-proxy", "-o", "jsonpath={.status.loadBalancer.ingress[0].ip}")
+	// stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	// cmd.Stdout = stdout
+	// cmd.Stderr = stderr
+	// fmt.Printf("111111\n")
+	// fmt.Fprintln(os.Stdout, stdout.String())
+	// fmt.Fprintln(os.Stdout, stderr.String())
+	// if err := cmd.Run(); err != nil {
+	// 	return err
+	// }
 	//c.KongAdminURL = fmt.Sprintf("http://%s:8444", strings.Trim(stdout.String(), `'"`))
 	c.KongAdminURL = "http://172.18.0.244:8001"
 	fmt.Printf("URL %s", c.KongAdminURL)
-	fmt.Printf("222222\n")
+	// fmt.Printf("222222\n")
 	// end of the thing
 
 	setupLog.Info("getting the kong admin api client configuration")
