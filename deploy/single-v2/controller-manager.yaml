@@ -39,7 +39,7 @@ spec:
               apiVersion: v1
               fieldPath: metadata.namespace
         # origin/release-bug
-        image: jimin1/kic-release:v2.0.0-0812
+        image: jimin1/kic-release:v2.0.0-debug
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
