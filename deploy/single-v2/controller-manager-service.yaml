@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kic-service
+  labels:
+    app: kong-ingress-controller
+spec:
+  ports:
+  - name: metrics
+    port: 10255
+    targetPort: 10255
+    protocol: TCP
+  selector:
+    app: kong-ingress-controller
+  type: NodePort
