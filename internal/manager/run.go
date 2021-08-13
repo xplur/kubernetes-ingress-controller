@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -61,7 +60,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-	c.KongAdminURL = fmt.Sprintf("http://%s:8444", strings.Trim(stdout.String(), `'"`))
+	//c.KongAdminURL = fmt.Sprintf("http://%s:8444", strings.Trim(stdout.String(), `'"`))
+	c.KongAdminURL = "http://172.18.0.244:8001"
 	fmt.Printf("URL %s", c.KongAdminURL)
 	fmt.Printf("222222\n")
 	// end of the thing
