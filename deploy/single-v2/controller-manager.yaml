@@ -2,14 +2,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: ingress-kong
+    app: kic
   name: kic
   namespace: kong
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ingress-kong
+      app: kic
   template:
     metadata:
       annotations:
@@ -18,7 +18,7 @@ spec:
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
-        app: ingress-kong
+        app: kic
     spec:
       containers:
       - env:
