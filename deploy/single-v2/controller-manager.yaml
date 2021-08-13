@@ -2,14 +2,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: kong-ingress-controller
-  name: kong-ingress-controller
+    app: ingress-kong
+  name: kic
   namespace: kong
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kong-ingress-controller
+      app: ingress-kong
   template:
     metadata:
       annotations:
@@ -18,12 +18,10 @@ spec:
         prometheus.io/scrape: "true"
         traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
-        app: kong-ingress-controller
+        app: ingress-kong
     spec:
       containers:
       - env:
-        # - name: CONTROLLER_KONG_ADMIN_URL
-        #   value: https://127.0.0.1:8444
         - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
           value: "true"
         - name: CONTROLLER_PUBLISH_SERVICE
